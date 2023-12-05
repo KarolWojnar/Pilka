@@ -8,10 +8,43 @@ public class StatystykiZawodnika {
     public StatystykiZawodnika() {}
 
     @Id
-    @Column(unique = true, name = "id Gracza")
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    public Long getPlayerId() {
+        return playerId;
+    }
+
+    public void setPlayerId(Long playerId) {
+        this.playerId = playerId;
+    }
+
+    @Column(name = "id gracza", unique = false)
+    private Long playerId;
+
     private String imie;
     private String nazwisko;
+    @Column(name = "id Drużyny")
+    private Long teamId;
+    @Column(name = "sezon rozgrywek")
+    private Long season;
+
+    public Long getSeason() {
+        return season;
+    }
+
+    public void setSeason(Long season) {
+        this.season = season;
+    }
+
+    public Long getTeamId() {
+        return teamId;
+    }
+
+    public void setTeamId(Long teamId) {
+        this.teamId = teamId;
+    }
+
     private double wiek;
     private double wzrost;
     private double waga;

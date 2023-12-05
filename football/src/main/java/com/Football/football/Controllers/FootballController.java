@@ -22,6 +22,8 @@ import java.net.http.HttpResponse;
 import java.util.List;
 import java.util.Optional;
 
+import static org.springframework.data.jpa.domain.AbstractPersistable_.id;
+
 @Controller
 public class FootballController {
 
@@ -36,8 +38,9 @@ public class FootballController {
 
     @GetMapping("/getStatsForSeason")
     public String giveTeam(Model model) throws IOException, InterruptedException, JSONException {
+        int teamId = 529;
         HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create("https://api-football-beta.p.rapidapi.com/teams/statistics?team=529&season=2022&league=140"))
+                .uri(URI.create("https://api-football-beta.p.rapidapi.com/teams/statistics?team=" + teamId +"&season=2022&league=140"))
                 .header("X-RapidAPI-Key", "d33e623437msha2a56a1ea6f5bfbp18d606jsndd5dc6ff099b")
                 .header("X-RapidAPI-Host", "api-football-beta.p.rapidapi.com")
                 .method("GET", HttpRequest.BodyPublishers.noBody())
@@ -143,12 +146,13 @@ public class FootballController {
         return "index";
     }
 
-    @GetMapping("/getPlayers")
-    public String give(Model model) throws IOException, InterruptedException, JSONException {
-
+    @GetMapping("/getPlayers/{id}&{year}")
+    public String give(Model model, @PathVariable int id, @PathVariable int year) throws IOException, InterruptedException, JSONException {
+        int teamId = id;
+        int season = year;
         for (int page = 1; page <= 3; page++) {
             HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create("https://api-football-beta.p.rapidapi.com/players?season=2022&league=140&team=529&page=" + page))
+                    .uri(URI.create("https://api-football-beta.p.rapidapi.com/players?season=" + season + "&league=140&team=" + teamId + "&page=" + page))
                     .header("X-RapidAPI-Key", "d33e623437msha2a56a1ea6f5bfbp18d606jsndd5dc6ff099b")
                     .header("X-RapidAPI-Host", "api-football-beta.p.rapidapi.com")
                     .method("GET", HttpRequest.BodyPublishers.noBody())
@@ -166,7 +170,9 @@ public class FootballController {
                         int isActive = playerStats.getJSONArray("statistics").getJSONObject(0).getJSONObject("games").optInt("minutes", 0);
                         if (isActive == 0) continue;
                         StatystykiZawodnika player = new StatystykiZawodnika();
-                        player.setId(playerStats.getJSONObject("player").getLong("id"));
+                        player.setTeamId((long) teamId);
+                        player.setSeason((long) season);
+                        player.setPlayerId(playerStats.getJSONObject("player").getLong("id"));
                         player.setImie(playerStats.getJSONObject("player").getString("firstname"));
                         player.setNazwisko(playerStats.getJSONObject("player").getString("lastname"));
                         player.setWiek(playerStats.getJSONObject("player").optDouble("age"));
@@ -242,8 +248,9 @@ public class FootballController {
 
     @GetMapping("/fixture")
     public String getFixtures() throws IOException, InterruptedException, JSONException {
+        int teamId = 529;
         HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create("https://api-football-beta.p.rapidapi.com/fixtures?season=2022&league=140&team=529"))
+                .uri(URI.create("https://api-football-beta.p.rapidapi.com/fixtures?season=2022&league=140&team=" + teamId))
                 .header("X-RapidAPI-Key", "d33e623437msha2a56a1ea6f5bfbp18d606jsndd5dc6ff099b")
                 .header("X-RapidAPI-Host", "api-football-beta.p.rapidapi.com")
                 .method("GET", HttpRequest.BodyPublishers.noBody())
@@ -286,7 +293,7 @@ public class FootballController {
                         JSONArray fixtureStatsArray = jsonFixtureResponse.getJSONArray("response");
                         for (int j = 0; j < fixtureStatsArray.length(); j++) {
                             JSONObject fixtureStats = fixtureStatsArray.getJSONObject(j);
-                            if (fixtureStats.getJSONObject("team").getInt("id") == 529) {
+                            if (fixtureStats.getJSONObject("team").getInt("id") == teamId) {
                                 JSONArray statisticsArray = fixtureStats.getJSONArray("statistics");
                                 statystykiSpotkan.setId(fixtureStats.getJSONObject("team").getLong("id"));
                                 int x = 0;

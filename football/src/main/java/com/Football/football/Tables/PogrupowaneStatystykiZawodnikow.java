@@ -7,22 +7,25 @@ import java.net.DatagramPacket;
 @Entity
 public class PogrupowaneStatystykiZawodnikow {
     @Id
-    @Column(name = "id piłkarza", unique = true)
+    @Column(name = "id piłkarza")
     private Long id;
-
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
-    }
-
     @Column(name = "Imie i nazwisko")
     private String imie;
     @Column(name = "pozycja")
     private String pozycja;
+    @Column(name = "Drybling i Skuteczność")
+    private Double dryblingSkutecznosc;
+    @Column(name = "Fizyczność i Interakcje")
+    private Double fizycznoscInterakcje;
+    @Column(name = "id Drużyny")
+    private Long teamId;
+    @Column(name = "Sezon rozgrywek")
+    private Long season;
+    @Column(name = "Obrona i kotnrola przeciwnika")
+    private Double obronaKotrolaPrzeciwnika;
 
+    @Column(name = "podania i kreatywność")
+    private Double podaniaKreatywnosc;
     public String getPozycja() {
         return pozycja;
     }
@@ -30,18 +33,6 @@ public class PogrupowaneStatystykiZawodnikow {
     public void setPozycja(String pozycja) {
         this.pozycja = pozycja;
     }
-
-    @Column(name = "Drybling i Skuteczność")
-    private Double dryblingSkutecznosc;
-
-    @Column(name = "Fizyczność i Interakcje")
-    private Double fizycznoscInterakcje;
-
-    @Column(name = "Obrona i kotnrola przeciwnika")
-    private Double obronaKotrolaPrzeciwnika;
-
-    @Column(name = "podania i kreatywność")
-    private Double podaniaKreatywnosc;
     public PogrupowaneStatystykiZawodnikow() {
     }
     public String getImie() {
@@ -68,10 +59,32 @@ public class PogrupowaneStatystykiZawodnikow {
     public void setFizycznoscInterakcje(Double fizycznoscInterakcje) {
         this.fizycznoscInterakcje = fizycznoscInterakcje;
     }
+    public Long getId() {
+        return id;
+    }
+    public void setId(Long id) {
+        this.id = id;
+    }
     public Double getObronaKotrolaPrzeciwnika() {
         return obronaKotrolaPrzeciwnika;
     }
     public void setObronaKotrolaPrzeciwnika(Double obronaKotrolaPrzeciwnika) {
         this.obronaKotrolaPrzeciwnika = obronaKotrolaPrzeciwnika;
+    }
+
+    public Long getTeamId() {
+        return teamId;
+    }
+
+    public void setTeamId(Long teamId) {
+        this.teamId = teamId;
+    }
+
+    public Long getSeason() {
+        return season;
+    }
+
+    public void setSeason(Long season) {
+        this.season = season;
     }
 }
