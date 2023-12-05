@@ -1,10 +1,8 @@
 package com.Football.football.Controllers;
 
-import com.Football.football.Repositories.FixturesRepository;
-import com.Football.football.Repositories.PogrupowaneRepository;
-import com.Football.football.Repositories.StatystykiZawodnikaRepository;
-import com.Football.football.Repositories.TeamStatsRepository;
+import com.Football.football.Repositories.*;
 import com.Football.football.Tables.PogrupowaneStatystykiZawodnikow;
+import com.Football.football.Tables.SredniaDruzyny;
 import com.Football.football.Tables.StatystykiZawodnika;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
@@ -20,21 +18,25 @@ public class ViewController {
     @Autowired
     private StatystykiZawodnikaRepository statystykiZawodnikaRepository;
     @Autowired
-    private TeamStatsRepository teamStatsRepository;
+    private SredniaDruzynyRepository sredniaDruzynyRepository;
     @Autowired
     private PogrupowaneRepository pogrupowaneRepository;
     @Autowired
     FixturesRepository fixturesRepository;
 
-    @GetMapping("/player/{id}")
-    public String getProfilPlayer(@PathVariable Long id, Model model) {
-        Optional<PogrupowaneStatystykiZawodnikow> optionalPlayer = pogrupowaneRepository.findById(id);
-        Optional<PogrupowaneStatystykiZawodnikow> avgPlayers = pogrupowaneRepository.findById(0L);
+    @GetMapping("/player/{id}&{year}")
+    public String getProfilPlayer(@PathVariable Long id, @PathVariable Long year, Model model) {
+        Optional<PogrupowaneStatystykiZawodnikow> optionalPlayer = pogrupowaneRepository.getPogrupowaneStatystykiZawodnikowByPlayerIdAndSeason(id, year);
+
         if (optionalPlayer.isPresent()) {
             PogrupowaneStatystykiZawodnikow player = optionalPlayer.get();
-            PogrupowaneStatystykiZawodnikow player0 = avgPlayers.get();
-            model.addAttribute("player0", player0);
-            model.addAttribute("player", player);
+            Optional<SredniaDruzyny> avgPlayer = sredniaDruzynyRepository.getSredniaDruzynyByTeamIdAndSeason(player.getTeamId(), player.getSeason());
+            if (avgPlayer.isPresent()) {
+                SredniaDruzyny avgTeam = avgPlayer.get();
+                model.addAttribute("player", player);
+                model.addAttribute("player0", avgTeam);
+            }
+            else model.addAttribute("noPlayer", "Nie ma takiego zawodnika");
         }
         else model.addAttribute("noPlayer", "Nie ma takiego zawodnika");
         return "playerView2";

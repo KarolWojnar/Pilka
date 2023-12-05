@@ -15,87 +15,91 @@
     </style>
 </head>
 <body>
+<div th:if="${noPlayer}">
+    <p>Nie ma takiego zawodnika</p>
+</div>
 <div id="container"></div>
-<script th:inline="javascript">
+<div th:if="${player}">
+    <script th:inline="javascript">
 
-    anychart.onDocumentReady(function () {
+        anychart.onDocumentReady(function () {
 
-        // create a data set
-        var chartData = {
-            header: ['#', /*[[${player0.imie}]]*/, /*[[${player.imie}]]*/],
-            rows: [
-                ['Fizyczność i interakcje', /*[[${player0.fizycznoscInterakcje}]]*/, /*[[${player.fizycznoscInterakcje}]]*/],
-                ['Obrona i Kotrola Przeciwnika', /*[[${player0.obronaKotrolaPrzeciwnika}]]*/, /*[[${player.obronaKotrolaPrzeciwnika}]]*/],
-                ['Drybling i Skutecznosc', /*[[${player0.dryblingSkutecznosc}]]*/, /*[[${player.dryblingSkutecznosc}]]*/],
-                ['Podania i Kreatywnosc', /*[[${player0.podaniaKreatywnosc}]]*/, /*[[${player.podaniaKreatywnosc}]]*/]
-            ]
-        };
+            // create a data set
+            var chartData = {
+                header: ['#', 'Sezon: ' + /*[[${player0.season}]]*/, /*[[${player.imie}]]*/],
+                rows: [
+                    ['Fizyczność i interakcje', /*[[${player0.fizycznoscInterakcje}]]*/, /*[[${player.fizycznoscInterakcje}]]*/],
+                    ['Obrona i Kotrola Przeciwnika', /*[[${player0.obronaKotrolaPrzeciwnika}]]*/, /*[[${player.obronaKotrolaPrzeciwnika}]]*/],
+                    ['Drybling i Skutecznosc', /*[[${player0.dryblingSkutecznosc}]]*/, /*[[${player.dryblingSkutecznosc}]]*/],
+                    ['Podania i Kreatywnosc', /*[[${player0.podaniaKreatywnosc}]]*/, /*[[${player.podaniaKreatywnosc}]]*/]
+                ]
+            };
 
-        // create a radar chart
-        var chart = anychart.radar();
+            // create a radar chart
+            var chart = anychart.radar();
 
-        // set the series type
-        chart.defaultSeriesType('area');
+            // set the series type
+            chart.defaultSeriesType('area');
 
-        // set the chart data
-        chart.data(chartData);
+            // set the chart data
+            chart.data(chartData);
 
-        // set the color palette
-        chart.palette(['#E5593499', '#64B5F6BF']);
+            // set the color palette
+            chart.palette(['#E5593499', '#64B5F6BF']);
 
-        // configure the appearance of the y-axis
-        chart.yAxis().stroke('#545f69');
-        chart.yAxis().ticks().stroke('#545f69');
+            // configure the appearance of the y-axis
+            chart.yAxis().stroke('#545f69');
+            chart.yAxis().ticks().stroke('#545f69');
 
-        // configure the stroke of the x-grid
-        chart.xGrid().stroke({
-            color: "#545f69",
-            thickness: 0.5,
-            dash: "10 5"
-        });
-
-        // configure the appearance of the y-grid
-        chart.yGrid().palette(['gray 0.05', 'gray 0.025']);
-
-        // begin the y-scale at 0
-        chart.yScale().minimum(0);
-
-        // set the y-scale ticks interval
-        chart.yScale().ticks().interval(0.01);
-
-        // set the hover mode
-        chart.interactivity().hoverMode('by-x');
-
-        //  set the marker type
-        chart.markerPalette(['star5']);
-
-        // improve the tooltip
-        chart.tooltip()
-            .displayMode('union')
-            .useHtml(true)
-            .format(function(e){
-                console.log(this);
-                return '<span style="color:' + this.series.color() + '">' +
-                    this.seriesName + ": " + this.value + "</span>"
+            // configure the stroke of the x-grid
+            chart.xGrid().stroke({
+                color: "#545f69",
+                thickness: 0.5,
+                dash: "10 5"
             });
 
-        // set chart legend settings
-        chart.legend()
-            .align('center')
-            .position('center-bottom')
-            .enabled(true);
+            // configure the appearance of the y-grid
+            chart.yGrid().palette(['gray 0.05', 'gray 0.025']);
 
-        // set the chart title
-        chart.title("Zawodnik");
+            // begin the y-scale at 0
+            chart.yScale().minimum(0);
 
-        // set container id for the chart
-        chart.container('container');
+            // set the y-scale ticks interval
+            chart.yScale().ticks().interval(0.01);
 
-        // initiate chart drawing
-        chart.draw();
+            // set the hover mode
+            chart.interactivity().hoverMode('by-x');
 
-    });
+            //  set the marker type
+            chart.markerPalette(['star5']);
 
-</script>
+            // improve the tooltip
+            chart.tooltip()
+                .displayMode('union')
+                .useHtml(true)
+                .format(function(e){
+                    console.log(this);
+                    return '<span style="color:' + this.series.color() + '">' +
+                        this.seriesName + ": " + this.value + "</span>"
+                });
+
+            // set chart legend settings
+            chart.legend()
+                .align('center')
+                .position('center-bottom')
+                .enabled(true);
+
+            // set the chart title
+            chart.title("Zawodnik");
+
+            // set container id for the chart
+            chart.container('container');
+
+            // initiate chart drawing
+            chart.draw();
+
+        });
+    </script>
+</div>
 </body>
 </html>

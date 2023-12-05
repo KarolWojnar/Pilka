@@ -3,8 +3,10 @@ package com.Football.football.Controllers;
 import com.Football.football.Repositories.PogrupowaneRepository;
 import com.Football.football.Repositories.SredniaDruzynyRepository;
 import com.Football.football.Repositories.StatystykiZawodnikaRepository;
+import com.Football.football.Repositories.TeamStatsRepository;
 import com.Football.football.Tables.PogrupowaneStatystykiZawodnikow;
 import com.Football.football.Tables.SredniaDruzyny;
+import com.Football.football.Tables.StatystykiDruzyny;
 import com.Football.football.Tables.StatystykiZawodnika;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
@@ -23,18 +25,81 @@ public class ManipulateController {
     private StatystykiZawodnikaRepository statystykiZawodnikaRepository;
     @Autowired
     private SredniaDruzynyRepository sredniaDruzynyRepository;
+    @Autowired
+    private TeamStatsRepository teamStatsRepository;
 
     @GetMapping("/get-avg")
     public String getAvg(Model model) {
         Iterable<StatystykiZawodnika> players = statystykiZawodnikaRepository.findAll();
+        Iterable<StatystykiDruzyny> teams = teamStatsRepository.findAll();
+
+        double fixturesCount = 0.0;
+        double goleAsystySuma = 0.0;
+        double celnePodaniaSuma = 0.0;
+        double kluczowePodaniaSuma = 0.0;
+        double wygraneDryblingiSuma = 0.0;
+        double strzalyNaBramkeSuma = 0.0;
+        double faulePopelnioneSuma = 0.0;
+        double kartkiCzerwoneSuma = 0.0;
+        double kartkiZolteSuma = 0.0;
+        double przegranePojedynkiSuma = 0.0;
+        double przechwytyUdaneSuma = 0.0;
+        double fauleNaZawodnikuSuma = 0.0;
+        double pojedynkiWygraneSuma = 0.0;
+
+        for (StatystykiZawodnika player : players) {
+            celnePodaniaSuma += (player.getPodania() * player.getDokladnoscPodan());
+            kluczowePodaniaSuma += player.getPodaniaKluczowe();
+            wygraneDryblingiSuma += player.getDryblingiWygrane();
+            strzalyNaBramkeSuma += player.getStrzalyCelne();
+            faulePopelnioneSuma += player.getFaulePopelnione();
+            kartkiCzerwoneSuma += player.getKartkiCzerwone();
+            kartkiZolteSuma += player.getKartkiZolte();
+            przegranePojedynkiSuma += (player.getPojedynki() - player.getPojedynkiWygrane());
+            przechwytyUdaneSuma += player.getPrzechwytyUdane();
+            fauleNaZawodnikuSuma += player.getFauleNaZawodniku();
+            pojedynkiWygraneSuma += player.getPojedynkiWygrane();
+        }
+
+        for (StatystykiDruzyny team : teams) {
+            fixturesCount += team.getSumaSpotkan();
+            goleAsystySuma += team.getGoleStrzeloneNaWyjezdzie();
+            goleAsystySuma += team.getGoleStrzeloneWDomu();
+        }
+
+        goleAsystySuma /= fixturesCount;
+        celnePodaniaSuma /= fixturesCount;
+        kluczowePodaniaSuma /= fixturesCount;
+        wygraneDryblingiSuma /= fixturesCount;
+        strzalyNaBramkeSuma /= fixturesCount;
+        faulePopelnioneSuma /= fixturesCount;
+        kartkiCzerwoneSuma /= fixturesCount;
+        kartkiZolteSuma /= fixturesCount;
+        przegranePojedynkiSuma /= fixturesCount;
+        przechwytyUdaneSuma /= fixturesCount;
+        fauleNaZawodnikuSuma /= fixturesCount;
+        pojedynkiWygraneSuma /= fixturesCount;
+
+        double goleAsystyWaga = 90 / goleAsystySuma;
+        double celnePodaniaWaga = 90 / celnePodaniaSuma;
+        double kluczowePodaniaWaga = 90 / kluczowePodaniaSuma;
+        double wygraneDryblingiWaga = 90 / wygraneDryblingiSuma;
+        double strzalyNaBramkeWaga = 90 / strzalyNaBramkeSuma;
+        double faulePopelnioneWaga = 90 / faulePopelnioneSuma;
+        double kartkiCzerwoneWaga = 90 / kartkiCzerwoneSuma;
+        double kartkiZolteWaga = 90 / kartkiZolteSuma;
+        double przegranePojedynkiWaga = 90 / przegranePojedynkiSuma;
+        double przechwytyUdaneWaga = 90 / przechwytyUdaneSuma;
+        double fauleNaZawodnikuWaga = 90 / fauleNaZawodnikuSuma;
+        double pojedynkiWygraneWaga = 90 / pojedynkiWygraneSuma;
 
         for (StatystykiZawodnika player: players) {
 
-            Optional<PogrupowaneStatystykiZawodnikow> optionalPlayer = pogrupowaneRepository.getPogrupowaneStatystykiZawodnikowByIdAndSeason(player.getId(), player.getSeason());
+            Optional<PogrupowaneStatystykiZawodnikow> optionalPlayer = pogrupowaneRepository.getPogrupowaneStatystykiZawodnikowByPlayerIdAndSeason(player.getPlayerId(), player.getSeason());
 
             PogrupowaneStatystykiZawodnikow zawodnik = new PogrupowaneStatystykiZawodnikow();
             zawodnik.setImie(player.getImie() + " " + player.getNazwisko());
-            zawodnik.setId(player.getId());
+            zawodnik.setPlayerId(player.getPlayerId());
             zawodnik.setTeamId(player.getTeamId());
             zawodnik.setSeason(player.getSeason());
 
@@ -42,33 +107,28 @@ public class ManipulateController {
 
             double minutes = player.getMinuty();
 
-            double weightPasses = 1.0;
-            double weightDribblingGoals = 1.5;
-            double weightAggression = 0.8;
-            double weightDefenseAndControl = 1.2;
-
-            double accuracyPerMinute = ((player.getPodania() * (player.getDokladnoscPodan() / 100)) / minutes) * weightPasses;
-            double keysPerMinute = (player.getPodaniaKluczowe() / minutes) * weightPasses;
-            double assistsPerMinute = (player.getAsysty() / minutes) * weightPasses;
+            double accuracyPerMinute = ((player.getPodania() * (player.getDokladnoscPodan() / 100)) / minutes) * celnePodaniaWaga;
+            double keysPerMinute = (player.getPodaniaKluczowe() / minutes) * kluczowePodaniaWaga;
+            double assistsPerMinute = (player.getAsysty() / minutes) * goleAsystyWaga;
             double summaryPasses = accuracyPerMinute + keysPerMinute + assistsPerMinute;
             zawodnik.setPodaniaKreatywnosc(summaryPasses);
 
-            double wonDribblingsPerMinute = (player.getDryblingiWygrane() / minutes) * weightDribblingGoals;
-            double shotsOnGoalPerMinute = (player.getStrzalyCelne() / minutes) * weightDribblingGoals;
-            double goalsPerMinute = (player.getGole() / minutes) * weightDribblingGoals;
+            double wonDribblingsPerMinute = (player.getDryblingiWygrane() / minutes) * wygraneDryblingiWaga;
+            double shotsOnGoalPerMinute = (player.getStrzalyCelne() / minutes) * strzalyNaBramkeWaga;
+            double goalsPerMinute = (player.getGole() / minutes) * goleAsystyWaga;
             double summaryDribblingGoals = wonDribblingsPerMinute + shotsOnGoalPerMinute + goalsPerMinute;
             zawodnik.setDryblingSkutecznosc(summaryDribblingGoals);
 
-            double foulsCommitedPerMinute = (player.getFaulePopelnione() / minutes) * weightAggression;
-            double redCards = (player.getKartkiCzerwone() / minutes) * weightAggression;
-            double yellowCards = (player.getKartkiZolte() / minutes) * weightAggression;
-            double duelsLostPerMinute = ((player.getPojedynki() - player.getPojedynkiWygrane()) / minutes) * weightAggression;
+            double foulsCommitedPerMinute = (player.getFaulePopelnione() / minutes) * faulePopelnioneWaga;
+            double redCards = (player.getKartkiCzerwone() / minutes) * kartkiCzerwoneWaga;
+            double yellowCards = (player.getKartkiZolte() / minutes) * kartkiZolteWaga;
+            double duelsLostPerMinute = ((player.getPojedynki() - player.getPojedynkiWygrane()) / minutes) * przegranePojedynkiWaga;
             double summaryAggression = foulsCommitedPerMinute + redCards + yellowCards + duelsLostPerMinute;
             zawodnik.setFizycznoscInterakcje(summaryAggression);
 
-            double interceptionsWonPerMinute = (player.getPrzechwytyUdane() / minutes) * weightDefenseAndControl;
-            double foulsDrawnPerMinute = (player.getFauleNaZawodniku() / minutes) * weightDefenseAndControl;
-            double duelsWonPerMinute = (player.getPojedynkiWygrane() / minutes) * weightDefenseAndControl;
+            double interceptionsWonPerMinute = (player.getPrzechwytyUdane() / minutes) * przechwytyUdaneWaga;
+            double foulsDrawnPerMinute = (player.getFauleNaZawodniku() / minutes) * fauleNaZawodnikuWaga;
+            double duelsWonPerMinute = (player.getPojedynkiWygrane() / minutes) * pojedynkiWygraneWaga;
             double summaryDefenseAndControll = interceptionsWonPerMinute + foulsDrawnPerMinute + duelsWonPerMinute;
             zawodnik.setObronaKotrolaPrzeciwnika(summaryDefenseAndControll);
 
@@ -84,10 +144,10 @@ public class ManipulateController {
     @GetMapping("/get-summary")
     public String getSum(Model model) {
 
-        double wagaFizycznosc = 0.1;
-        double wagaDrybling = 0.5;
-        double wagaObrona = 0.2;
-        double wagaPodania = 0.3;
+        double wagaFizycznosc = 0.8;
+        double wagaDrybling = 1.1;
+        double wagaObrona = 1.2;
+        double wagaPodania = 1.4;
 
         List<Object[]> combinationsTeamsAndSeasons = statystykiZawodnikaRepository.getDistinctBySeasonAndTeamId();
         for (Object[] singleCombination: combinationsTeamsAndSeasons) {
@@ -95,6 +155,11 @@ public class ManipulateController {
             Long teamId = (Long) singleCombination[1];
 
             List<PogrupowaneStatystykiZawodnikow> players = pogrupowaneRepository.getPogrupowaneStatystykiZawodnikowByTeamIdAndSeason(teamId, season);
+            Optional<SredniaDruzyny> optionalSredniaDruzyny = sredniaDruzynyRepository.getSredniaDruzynyByTeamIdAndSeason(teamId, season);
+            if (optionalSredniaDruzyny.isPresent()) {
+                SredniaDruzyny prevTeam = optionalSredniaDruzyny.get();
+                sredniaDruzynyRepository.delete(prevTeam);
+            }
             double sum = 0, avgPodaniaKreatywanosc = 0, avgDryblingSkutecznosc = 0, avgFizycznoscInterakcje = 0, avgObronaKotrolaPrzeciwnika = 0;
 
             for (PogrupowaneStatystykiZawodnikow player : players) {
@@ -122,6 +187,7 @@ public class ManipulateController {
             team.setFizycznoscInterakcje(avgFizycznoscInterakcje);
             team.setPodaniaKreatywnosc(avgPodaniaKreatywanosc);
             team.setObronaKotrolaPrzeciwnika(avgObronaKotrolaPrzeciwnika);
+
 
             sredniaDruzynyRepository.save(team);
         }

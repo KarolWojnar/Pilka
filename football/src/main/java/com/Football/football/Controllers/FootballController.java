@@ -3,7 +3,7 @@ package com.Football.football.Controllers;
 import com.Football.football.Repositories.FixturesRepository;
 import com.Football.football.Repositories.StatystykiZawodnikaRepository;
 import com.Football.football.Repositories.TeamStatsRepository;
-import com.Football.football.Tables.StatystykiDruzynySezon2022;
+import com.Football.football.Tables.StatystykiDruzyny;
 import com.Football.football.Tables.StatystykiSpotkan;
 import com.Football.football.Tables.StatystykiZawodnika;
 import org.json.JSONArray;
@@ -19,10 +19,7 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.util.List;
 import java.util.Optional;
-
-import static org.springframework.data.jpa.domain.AbstractPersistable_.id;
 
 @Controller
 public class FootballController {
@@ -36,11 +33,10 @@ public class FootballController {
     @Autowired
     FixturesRepository fixturesRepository;
 
-    @GetMapping("/getStatsForSeason")
-    public String giveTeam(Model model) throws IOException, InterruptedException, JSONException {
-        int teamId = 529;
+    @GetMapping("/getStatsForSeason/{teamId}&{year}")
+    public String giveTeam(Model model, @PathVariable Long teamId, @PathVariable Long year) throws IOException, InterruptedException, JSONException {
         HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create("https://api-football-beta.p.rapidapi.com/teams/statistics?team=" + teamId +"&season=2022&league=140"))
+                .uri(URI.create("https://api-football-beta.p.rapidapi.com/teams/statistics?team=" + teamId +"&season=" + year + "&league=140"))
                 .header("X-RapidAPI-Key", "d33e623437msha2a56a1ea6f5bfbp18d606jsndd5dc6ff099b")
                 .header("X-RapidAPI-Host", "api-football-beta.p.rapidapi.com")
                 .method("GET", HttpRequest.BodyPublishers.noBody())
@@ -52,15 +48,17 @@ public class FootballController {
         if (jsonResponse.has("response")) {
             JSONObject responseData = jsonResponse.getJSONObject("response");
 
-            Optional<StatystykiDruzynySezon2022> optional = teamStatsRepository.findById(responseData.getJSONObject("team").getLong("id"));
+            Optional<StatystykiDruzyny> optional = teamStatsRepository.getStatystykiDruzyniesByTeamIdAndSeason(responseData.getJSONObject("team").getLong("id"), year);
             if (optional.isPresent()) {
-                StatystykiDruzynySezon2022 updateTeam = optional.get();
+                StatystykiDruzyny updateTeam = optional.get();
                 teamStatsRepository.delete(updateTeam);
             }
-            StatystykiDruzynySezon2022 teamStats = new StatystykiDruzynySezon2022();
+            StatystykiDruzyny teamStats = new StatystykiDruzyny();
+            teamStats.setTeamId(teamId);
+            teamStats.setSeason(year);
             JSONObject fixtures = responseData.getJSONObject("fixtures");
-            teamStats.setId(responseData.getJSONObject("team").getLong("id"));
             JSONObject played = fixtures.getJSONObject("played");
+            teamStats.setSumaSpotkan(played.optDouble("total", 0));
             teamStats.setMeczeDomowe(played.optDouble("home", 0));
             teamStats.setMeczeWyjazdowe(played.optDouble("away", 0));
 

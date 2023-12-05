@@ -1,7 +1,10 @@
 package com.Football.football.Repositories;
 
-import com.Football.football.Tables.StatystykiDruzynySezon2022;
+import com.Football.football.Tables.StatystykiDruzyny;
 import org.springframework.data.repository.CrudRepository;
 
-public interface TeamStatsRepository extends CrudRepository<StatystykiDruzynySezon2022, Long> {
+import java.util.Optional;
+
+public interface TeamStatsRepository extends CrudRepository<StatystykiDruzyny, Long> {
+    Optional<StatystykiDruzyny> getStatystykiDruzyniesByTeamIdAndSeason(Long id, Long year);
 }

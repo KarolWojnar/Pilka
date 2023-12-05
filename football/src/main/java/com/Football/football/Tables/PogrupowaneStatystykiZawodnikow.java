@@ -7,8 +7,19 @@ import java.net.DatagramPacket;
 @Entity
 public class PogrupowaneStatystykiZawodnikow {
     @Id
-    @Column(name = "id piłkarza")
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    public Long getPlayerId() {
+        return playerId;
+    }
+
+    public void setPlayerId(Long playerId) {
+        this.playerId = playerId;
+    }
+
+    @Column(name = "id piłkarza")
+    private Long playerId;
     @Column(name = "Imie i nazwisko")
     private String imie;
     @Column(name = "pozycja")
