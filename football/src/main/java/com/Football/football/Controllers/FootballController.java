@@ -36,7 +36,7 @@ public class FootballController {
     @GetMapping("/getStatsForSeason/{teamId}&{year}")
     public String giveTeam(Model model, @PathVariable Long teamId, @PathVariable Long year) throws IOException, InterruptedException, JSONException {
         HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create("https://api-football-beta.p.rapidapi.com/teams/statistics?team=" + teamId +"&season=" + year + "&league=140"))
+                .uri(URI.create("https://api-football-beta.p.rapidapi.com/teams/statistics?team=" + teamId +"&season=" + year))
                 .header("X-RapidAPI-Key", "d33e623437msha2a56a1ea6f5bfbp18d606jsndd5dc6ff099b")
                 .header("X-RapidAPI-Host", "api-football-beta.p.rapidapi.com")
                 .method("GET", HttpRequest.BodyPublishers.noBody())
@@ -248,7 +248,7 @@ public class FootballController {
     public String getFixtures() throws IOException, InterruptedException, JSONException {
         int teamId = 529;
         HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create("https://api-football-beta.p.rapidapi.com/fixtures?season=2022&league=140&team=" + teamId))
+                .uri(URI.create("https://api-football-beta.p.rapidapi.com/fixtures?season=2022&team=" + teamId))
                 .header("X-RapidAPI-Key", "d33e623437msha2a56a1ea6f5bfbp18d606jsndd5dc6ff099b")
                 .header("X-RapidAPI-Host", "api-football-beta.p.rapidapi.com")
                 .method("GET", HttpRequest.BodyPublishers.noBody())
