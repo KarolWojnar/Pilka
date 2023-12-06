@@ -167,6 +167,14 @@ public class FootballController {
                         JSONObject playerStats = statsArray.getJSONObject(i);
                         int isActive = playerStats.getJSONArray("statistics").getJSONObject(0).getJSONObject("games").optInt("minutes", 0);
                         if (isActive == 0) continue;
+
+                        Optional<StatystykiZawodnika> optional = statystykiZawodnikaRepository.getStatystykiZawodnikaByTeamIdAndSeason(playerStats.getJSONObject("player").getLong("id"), (long) season);
+
+                        if (optional.isPresent()) {
+                            StatystykiZawodnika toUpdate = optional.get();
+                            statystykiZawodnikaRepository.delete(toUpdate);
+                        }
+
                         StatystykiZawodnika player = new StatystykiZawodnika();
                         player.setTeamId((long) teamId);
                         player.setSeason((long) season);
