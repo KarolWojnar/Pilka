@@ -38,12 +38,7 @@ public class ManipulateController {
     }
 
     @GetMapping("/get-summary")
-    public String getSum(Model model) {
-
-        double wagaFizycznosc = 1.0;
-        double wagaDrybling = 1.0;
-        double wagaObrona = 1.0;
-        double wagaPodania = 1.0;
+    public String getSum() {
 
         List<Object[]> combinationsTeamsAndSeasons = statystykiZawodnikaRepository.getDistinctBySeasonAndTeamId();
         for (Object[] singleCombination: combinationsTeamsAndSeasons) {
@@ -71,19 +66,15 @@ public class ManipulateController {
             avgObronaKotrolaPrzeciwnika /= sum;
             avgPodaniaKreatywanosc /= sum;
 
-            avgFizycznoscInterakcje *= wagaFizycznosc;
-            avgDryblingSkutecznosc *= wagaDrybling;
-            avgObronaKotrolaPrzeciwnika *= wagaObrona;
-            avgPodaniaKreatywanosc *= wagaPodania;
-
             SredniaDruzyny team = new SredniaDruzyny();
             team.setTeamId(teamId);
             team.setSeason(season);
+            Optional<StatystykiDruzyny> optionalName = teamStatsRepository.findFirstByTeamId(teamId);
+            optionalName.ifPresent(statystykiDruzyny -> team.setTeamName(statystykiDruzyny.getTeamName()));
             team.setDryblingSkutecznosc(avgDryblingSkutecznosc);
             team.setFizycznoscInterakcje(avgFizycznoscInterakcje);
             team.setPodaniaKreatywnosc(avgPodaniaKreatywanosc);
             team.setObronaKotrolaPrzeciwnika(avgObronaKotrolaPrzeciwnika);
-
 
             sredniaDruzynyRepository.save(team);
         }

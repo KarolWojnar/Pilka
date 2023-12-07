@@ -51,4 +51,18 @@ public class ViewController {
         return "playerView";
     }
 
+    @GetMapping("/compare/year/{year}/teams/{teamA}&{teamB}")
+    public String compareTeams(@PathVariable Long year, @PathVariable Long teamA, @PathVariable Long teamB, Model model) {
+        Optional<SredniaDruzyny> optionalTeamA = sredniaDruzynyRepository.getSredniaDruzynyByTeamIdAndSeason(teamA, year);
+        if (optionalTeamA.isPresent()) {
+            Optional<SredniaDruzyny> optionalTeamB = sredniaDruzynyRepository.getSredniaDruzynyByTeamIdAndSeason(teamB, year);
+            if (optionalTeamB.isPresent()) {
+                SredniaDruzyny TeamA = optionalTeamA.get();
+                SredniaDruzyny TeamB = optionalTeamB.get();
+                model.addAttribute("TeamA", TeamA);
+                model.addAttribute("TeamB", TeamB);
+            } else model.addAttribute("noTeams", "Nie można porównać tych drużyn.");
+        } else model.addAttribute("noTeams", "Nie można porównać tych drużyn.");
+        return "teamView";
+    }
 }

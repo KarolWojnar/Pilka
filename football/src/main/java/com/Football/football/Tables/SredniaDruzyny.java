@@ -19,6 +19,16 @@ public class SredniaDruzyny {
     private Double obronaKotrolaPrzeciwnika;
     @Column(name = "podania i kreatywność")
     private Double podaniaKreatywnosc;
+    public String getTeamName() {
+        return teamName;
+    }
+
+    public void setTeamName(String teamName) {
+        this.teamName = teamName;
+    }
+
+    @Column(name = "Nazwa drużyny")
+    private String teamName;
 
     public Double getDryblingSkutecznosc() {
         return dryblingSkutecznosc;

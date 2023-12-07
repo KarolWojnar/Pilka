@@ -13,6 +13,17 @@ public class StatystykiDruzyny {
     @Column(name = "suma spotkan")
     private Double sumaSpotkan;
 
+    public String getTeamName() {
+        return teamName;
+    }
+
+    public void setTeamName(String teamName) {
+        this.teamName = teamName;
+    }
+
+    @Column(name = "Nazwa drużyny")
+    private String teamName;
+
     public Long getTeamId() {
         return teamId;
     }

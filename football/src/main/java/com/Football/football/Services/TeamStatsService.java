@@ -23,9 +23,9 @@ public class TeamStatsService {
         this.teamStatsRepository = teamStatsRepository;
     }
 
-    public void updateTeamStats(Long teamId, Long year) throws IOException, InterruptedException, JSONException {
+    public void updateTeamStats(int teamId, int year) throws IOException, InterruptedException, JSONException {
         HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create("https://api-football-beta.p.rapidapi.com/teams/statistics?team=" + teamId +"&season=" + year))
+                .uri(URI.create("https://api-football-beta.p.rapidapi.com/teams/statistics?league=140&team=" + teamId +"&season=" + year))
                 .header("X-RapidAPI-Key", "d33e623437msha2a56a1ea6f5bfbp18d606jsndd5dc6ff099b")
                 .header("X-RapidAPI-Host", "api-football-beta.p.rapidapi.com")
                 .method("GET", HttpRequest.BodyPublishers.noBody())
@@ -36,14 +36,15 @@ public class TeamStatsService {
         if (jsonResponse.has("response")) {
             JSONObject responseData = jsonResponse.getJSONObject("response");
 
-            Optional<StatystykiDruzyny> optional = teamStatsRepository.getStatystykiDruzyniesByTeamIdAndSeason(responseData.getJSONObject("team").getLong("id"), year);
+            Optional<StatystykiDruzyny> optional = teamStatsRepository.getStatystykiDruzyniesByTeamIdAndSeason(responseData.getJSONObject("team").getLong("id"), (long) year);
             if (optional.isPresent()) {
                 StatystykiDruzyny updateTeam = optional.get();
                 teamStatsRepository.delete(updateTeam);
             }
             StatystykiDruzyny teamStats = new StatystykiDruzyny();
-            teamStats.setTeamId(teamId);
-            teamStats.setSeason(year);
+            teamStats.setTeamName(responseData.getJSONObject("team").getString("name"));
+            teamStats.setTeamId((long) teamId);
+            teamStats.setSeason((long) year);
             JSONObject fixtures = responseData.getJSONObject("fixtures");
             JSONObject played = fixtures.getJSONObject("played");
             teamStats.setSumaSpotkan(played.optDouble("total", 0));

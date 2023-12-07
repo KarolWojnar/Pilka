@@ -40,7 +40,7 @@ public class FootballController {
     private FixturesService fixturesService;
 
     @GetMapping("/getStatsForSeason/{teamId}&{year}")
-    public String giveTeam(@PathVariable Long teamId, @PathVariable Long year) throws IOException, InterruptedException, JSONException {
+    public String giveTeam(@PathVariable int teamId, @PathVariable int year) throws IOException, InterruptedException, JSONException {
         teamStatsService.updateTeamStats(teamId, year);
         return "index";
     }

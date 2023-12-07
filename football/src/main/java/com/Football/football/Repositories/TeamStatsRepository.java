@@ -7,4 +7,5 @@ import java.util.Optional;
 
 public interface TeamStatsRepository extends CrudRepository<StatystykiDruzyny, Long> {
     Optional<StatystykiDruzyny> getStatystykiDruzyniesByTeamIdAndSeason(Long id, Long year);
+    Optional<StatystykiDruzyny> findFirstByTeamId(Long id);
 }
