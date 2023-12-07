@@ -1,0 +1,241 @@
+package com.Football.football.Services;
+
+import com.Football.football.Repositories.PogrupowaneRepository;
+import com.Football.football.Repositories.StatystykiZawodnikaRepository;
+import com.Football.football.Repositories.TeamStatsRepository;
+import com.Football.football.Tables.PogrupowaneStatystykiZawodnikow;
+import com.Football.football.Tables.StatystykiDruzyny;
+import com.Football.football.Tables.StatystykiZawodnika;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.io.IOException;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.util.Optional;
+
+@Service
+public class PlayerStatsService {
+
+    private final StatystykiZawodnikaRepository statystykiZawodnikaRepository;
+    private final TeamStatsRepository teamStatsRepository;
+    private final PogrupowaneRepository pogrupowaneRepository;
+
+    @Autowired
+    public PlayerStatsService(StatystykiZawodnikaRepository statystykiZawodnikaRepository, TeamStatsRepository teamStatsRepository, PogrupowaneRepository pogrupowaneRepository) {
+        this.statystykiZawodnikaRepository = statystykiZawodnikaRepository;
+        this.teamStatsRepository = teamStatsRepository;
+        this.pogrupowaneRepository = pogrupowaneRepository;
+    }
+
+    public void updatePlayerStats(int teamId, int season) throws IOException, InterruptedException, JSONException {
+        for (int page = 1; page <= 3; page++) {
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create("https://api-football-beta.p.rapidapi.com/players?season=" + season + "&league=140&team=" + teamId + "&page=" + page))
+                    .header("X-RapidAPI-Key", "d33e623437msha2a56a1ea6f5bfbp18d606jsndd5dc6ff099b")
+                    .header("X-RapidAPI-Host", "api-football-beta.p.rapidapi.com")
+                    .method("GET", HttpRequest.BodyPublishers.noBody())
+                    .build();
+
+            HttpResponse<String> response = HttpClient.newHttpClient().send(request, HttpResponse.BodyHandlers.ofString());
+            String responseBody = response.body();
+            JSONObject jsonResponse = new JSONObject(responseBody);
+            if (jsonResponse.has("response")) {
+                JSONArray statsArray = jsonResponse.getJSONArray("response");
+                for(int i = 0; i < statsArray.length(); i++) {
+                    if (statsArray.length() > 0) {
+                        JSONObject playerStats = statsArray.getJSONObject(i);
+                        int isActive = playerStats.getJSONArray("statistics").getJSONObject(0).getJSONObject("games").optInt("minutes", 0);
+                        if (isActive == 0) continue;
+
+                        Optional<StatystykiZawodnika> optional = statystykiZawodnikaRepository.getStatystykiZawodnikaByTeamIdAndSeason(playerStats.getJSONObject("player").getLong("id"), (long) season);
+
+                        if (optional.isPresent()) {
+                            StatystykiZawodnika toUpdate = optional.get();
+                            statystykiZawodnikaRepository.delete(toUpdate);
+                        }
+
+                        StatystykiZawodnika player = new StatystykiZawodnika();
+                        player.setTeamId((long) teamId);
+                        player.setSeason((long) season);
+                        player.setPlayerId(playerStats.getJSONObject("player").getLong("id"));
+                        player.setImie(playerStats.getJSONObject("player").getString("firstname"));
+                        player.setNazwisko(playerStats.getJSONObject("player").getString("lastname"));
+                        player.setWiek(playerStats.getJSONObject("player").optDouble("age"));
+                        player.setWzrost(Double.parseDouble(playerStats.getJSONObject("player").optString("height", "10 cm")
+                                .replaceAll(" cm", "").replaceAll("\n", "0").replaceAll("null", "0")));
+                        player.setWaga(Double.parseDouble(playerStats.getJSONObject("player").optString("weight", "10 kg")
+                                .replaceAll(" kg", "").replaceAll("\n", "0").replaceAll("null", "0")));
+                        player.setKraj(playerStats.getJSONObject("player").optString("nationality"));
+                        player.setCzyKontuzjowany((playerStats.getJSONObject("player").getString("injured")).equals("true"));
+                        if (playerStats.has("statistics")) {
+                            JSONArray statisticsArray = playerStats.getJSONArray("statistics");
+                            if (statisticsArray.length() > 0) {
+                                JSONObject statistics = statisticsArray.getJSONObject(0);
+                                if (statistics.has("games")) {
+                                    JSONObject games = statistics.getJSONObject("games");
+                                    player.setWystepy(games.optDouble("appearences", 0));
+                                    player.setMinuty(games.optDouble("minutes", 0));
+                                    player.setPozycja(games.getString("position"));
+                                    player.setRating(games.optDouble("rating", 0));
+                                    if ((player.getMinuty() == 0) || (player.getRating() == 0)) continue;
+                                }
+                                if (statistics.has("shots")) {
+                                    JSONObject shots = statistics.getJSONObject("shots");
+                                    player.setStrzaly(shots.optDouble("total", 0));
+                                    player.setStrzalyCelne(shots.optDouble("on", 0));
+                                }
+                                if (statistics.has("goals")) {
+                                    JSONObject goals = statistics.getJSONObject("goals");
+                                    player.setGole(goals.optDouble("total", 0));
+                                    player.setAsysty(goals.optDouble("assists", 0));
+                                }
+                                if (statistics.has("passes")) {
+                                    JSONObject passes = statistics.getJSONObject("passes");
+                                    player.setPodania(passes.optDouble("total", 0));
+                                    player.setDokladnoscPodan(passes.optDouble("accuracy", 0));
+                                    player.setPodaniaKluczowe(passes.optDouble("key", 0));
+                                }
+                                if (statistics.has("duels")) {
+                                    JSONObject duels = statistics.getJSONObject("duels");
+                                    player.setPojedynki(duels.optDouble("total", 0));
+                                    player.setPojedynkiWygrane(duels.optDouble("won", 0));
+                                }
+                                if (statistics.has("dribbles")) {
+                                    JSONObject dribbles = statistics.getJSONObject("dribbles");
+                                    player.setDryblingi(dribbles.optDouble("attempts", 0));
+                                    player.setDryblingiWygrane(dribbles.optDouble("success", 0));
+                                }
+                                if (statistics.has("fouls")) {
+                                    JSONObject fouls = statistics.getJSONObject("fouls");
+                                    player.setFaulePopelnione(fouls.optDouble("committed", 0));
+                                    player.setFauleNaZawodniku(fouls.optDouble("drawn", 0));
+                                }
+                                if (statistics.has("cards")) {
+                                    JSONObject cards = statistics.getJSONObject("cards");
+                                    player.setKartkiZolte(cards.optDouble("yellow", 0));
+                                    player.setKartkiCzerwone(cards.optDouble("red", 0));
+                                }
+                                if (statistics.has("tackles")) {
+                                    JSONObject tackles = statistics.getJSONObject("tackles");
+                                    player.setProbyPrzechwytu(tackles.optDouble("total", 0));
+                                    player.setPrzechwytyUdane(tackles.optDouble("interceptions", 0));
+                                }
+                            }
+                        }
+                        statystykiZawodnikaRepository.save(player);
+                    }
+                }
+            }
+        }
+    }
+
+    public void getAvgOfAllPlayers() {
+        Iterable<StatystykiZawodnika> players = statystykiZawodnikaRepository.findAll();
+        Iterable<StatystykiDruzyny> teams = teamStatsRepository.findAll();
+
+        double fixturesCount = calculateFixtureCount(teams);
+        double[] playerSum = calculatePlayerSum(players);
+        double teamSum = calculateTeamGoalsSum(teams);
+
+        teamSum = calculateAverages(playerSum, teamSum, fixturesCount);
+        double[] weights = calcculateWeights(playerSum, teamSum);
+        calculateWeightAndSave(players, weights);
+    }
+
+    private double calculateTeamGoalsSum(Iterable<StatystykiDruzyny> teams) {
+        double goleAsystySuma = 0.0;
+        for (StatystykiDruzyny team : teams) {
+            goleAsystySuma += team.getGoleStrzeloneNaWyjezdzie();
+            goleAsystySuma += team.getGoleStrzeloneWDomu();
+        }
+        return goleAsystySuma;
+    }
+
+    private double[] calculatePlayerSum(Iterable<StatystykiZawodnika> players) {
+        double[] sums = new double[11];
+        for (StatystykiZawodnika player : players) {
+            sums[0] += (player.getPodania() * player.getDokladnoscPodan());
+            sums[1] += player.getPodaniaKluczowe();
+            sums[2] += player.getDryblingiWygrane();
+            sums[3] += player.getStrzalyCelne();
+            sums[4] += player.getFaulePopelnione();
+            sums[5] += player.getKartkiCzerwone();
+            sums[6] += player.getKartkiZolte();
+            sums[7] += (player.getPojedynki() - player.getPojedynkiWygrane());
+            sums[8] += player.getPrzechwytyUdane();
+            sums[9] += player.getFauleNaZawodniku();
+            sums[10] += player.getPojedynkiWygrane();
+        }
+        return sums;
+    }
+    private double calculateFixtureCount(Iterable<StatystykiDruzyny> teams) {
+        double fixturesCount = 0.0;
+        for (StatystykiDruzyny team : teams) {
+            fixturesCount += team.getSumaSpotkan();
+        }
+        return fixturesCount;
+    }
+
+    private double calculateAverages(double[] playerSums, double teamGoalsSums, double fixturesCount) {
+        for (int i = 0; i < 11; i++) {
+            playerSums[i] /= fixturesCount;
+        }
+        return teamGoalsSums /= fixturesCount;
+    }
+
+    private double[] calcculateWeights(double[] playersSum, double teamGoalsSum) {
+        double[] weights = new double[12];
+        for (int i = 0; i < 11; i++) {
+            weights[i] = 90 / playersSum[i];
+        }
+        weights[11] = 90 / teamGoalsSum;
+        return weights;
+    }
+    private void calculateWeightAndSave(Iterable<StatystykiZawodnika> players, double[] weights) {
+        for (StatystykiZawodnika player : players) {
+            Optional<PogrupowaneStatystykiZawodnikow> optionalPlayer = pogrupowaneRepository.getPogrupowaneStatystykiZawodnikowByPlayerIdAndSeason(player.getPlayerId(), player.getSeason());
+
+            PogrupowaneStatystykiZawodnikow zawodnik = new PogrupowaneStatystykiZawodnikow();
+            zawodnik.setImie(player.getImie() + " " + player.getNazwisko());
+            zawodnik.setPlayerId(player.getPlayerId());
+            zawodnik.setTeamId(player.getTeamId());
+            zawodnik.setSeason(player.getSeason());
+            zawodnik.setPozycja(player.getPozycja());
+
+            double minutes = player.getMinuty();
+
+            double accuracyPerMinute = ((player.getPodania() * (player.getDokladnoscPodan() / 100)) / minutes) * weights[0];
+            double keysPerMinute = (player.getPodaniaKluczowe() / minutes) * weights[1];
+            double assistsPerMinute = (player.getAsysty() / minutes) * weights[11];
+            zawodnik.setPodaniaKreatywnosc(accuracyPerMinute + keysPerMinute + assistsPerMinute);
+
+            double wonDribblingsPerMinute = (player.getDryblingiWygrane() / minutes) * weights[2];
+            double shotsOnGoalPerMinute = (player.getStrzalyCelne() / minutes) * weights[3];
+            double goalsPerMinute = (player.getGole() / minutes) * weights[11];
+            zawodnik.setDryblingSkutecznosc(wonDribblingsPerMinute + shotsOnGoalPerMinute + goalsPerMinute);
+
+            double foulsCommitedPerMinute = (player.getFaulePopelnione() / minutes) * weights[4];
+            double redCards = (player.getKartkiCzerwone() / minutes) * weights[5];
+            double yellowCards = (player.getKartkiZolte() / minutes) * weights[6];
+            double duelsLostPerMinute = ((player.getPojedynki() - player.getPojedynkiWygrane()) / minutes) * weights[7];
+            zawodnik.setFizycznoscInterakcje(foulsCommitedPerMinute + redCards + yellowCards + duelsLostPerMinute);
+
+            double interceptionsWonPerMinute = (player.getPrzechwytyUdane() / minutes) * weights[8];
+            double foulsDrawnPerMinute = (player.getFauleNaZawodniku() / minutes) * weights[9];
+            double duelsWonPerMinute = (player.getPojedynkiWygrane() / minutes) * weights[10];
+            zawodnik.setObronaKotrolaPrzeciwnika(interceptionsWonPerMinute + foulsDrawnPerMinute + duelsWonPerMinute);
+
+            if (optionalPlayer.isPresent()) {
+                PogrupowaneStatystykiZawodnikow updatePlayer = optionalPlayer.get();
+                pogrupowaneRepository.delete(updatePlayer);
+            }
+            pogrupowaneRepository.save(zawodnik);
+        }
+    }
+}
