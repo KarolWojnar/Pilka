@@ -1,9 +1,11 @@
 package com.Football.football.Services;
 
 import com.Football.football.Repositories.PogrupowaneRepository;
+import com.Football.football.Repositories.SredniaDruzynyRepository;
 import com.Football.football.Repositories.StatystykiZawodnikaRepository;
 import com.Football.football.Repositories.TeamStatsRepository;
 import com.Football.football.Tables.PogrupowaneStatystykiZawodnikow;
+import com.Football.football.Tables.SredniaDruzyny;
 import com.Football.football.Tables.StatystykiDruzyny;
 import com.Football.football.Tables.StatystykiZawodnika;
 import org.json.JSONArray;
@@ -17,6 +19,7 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -25,12 +28,14 @@ public class PlayerStatsService {
     private final StatystykiZawodnikaRepository statystykiZawodnikaRepository;
     private final TeamStatsRepository teamStatsRepository;
     private final PogrupowaneRepository pogrupowaneRepository;
+    private final SredniaDruzynyRepository sredniaDruzynyRepository;
 
     @Autowired
-    public PlayerStatsService(StatystykiZawodnikaRepository statystykiZawodnikaRepository, TeamStatsRepository teamStatsRepository, PogrupowaneRepository pogrupowaneRepository) {
+    public PlayerStatsService(StatystykiZawodnikaRepository statystykiZawodnikaRepository, TeamStatsRepository teamStatsRepository, PogrupowaneRepository pogrupowaneRepository, SredniaDruzynyRepository sredniaDruzynyRepository) {
         this.statystykiZawodnikaRepository = statystykiZawodnikaRepository;
         this.teamStatsRepository = teamStatsRepository;
         this.pogrupowaneRepository = pogrupowaneRepository;
+        this.sredniaDruzynyRepository = sredniaDruzynyRepository;
     }
 
     public void updatePlayerStats(int teamId, int season) throws IOException, InterruptedException, JSONException {
@@ -236,6 +241,47 @@ public class PlayerStatsService {
                 pogrupowaneRepository.delete(updatePlayer);
             }
             pogrupowaneRepository.save(zawodnik);
+        }
+    }
+
+    public void getSummary() {
+        List<Object[]> combinationsTeamsAndSeasons = statystykiZawodnikaRepository.getDistinctBySeasonAndTeamId();
+        for (Object[] singleCombination : combinationsTeamsAndSeasons) {
+            Long season = (Long) singleCombination[0];
+            Long teamId = (Long) singleCombination[1];
+
+            List<PogrupowaneStatystykiZawodnikow> players = pogrupowaneRepository.getPogrupowaneStatystykiZawodnikowByTeamIdAndSeason(teamId, season);
+            Optional<SredniaDruzyny> optionalSredniaDruzyny = sredniaDruzynyRepository.getSredniaDruzynyByTeamIdAndSeason(teamId, season);
+            if (optionalSredniaDruzyny.isPresent()) {
+                SredniaDruzyny prevTeam = optionalSredniaDruzyny.get();
+                sredniaDruzynyRepository.delete(prevTeam);
+            }
+            double sum = 0, avgPodaniaKreatywanosc = 0, avgDryblingSkutecznosc = 0, avgFizycznoscInterakcje = 0, avgObronaKotrolaPrzeciwnika = 0;
+
+            for (PogrupowaneStatystykiZawodnikow player : players) {
+                sum++;
+                avgFizycznoscInterakcje += player.getFizycznoscInterakcje();
+                avgDryblingSkutecznosc += player.getDryblingSkutecznosc();
+                avgObronaKotrolaPrzeciwnika += player.getObronaKotrolaPrzeciwnika();
+                avgPodaniaKreatywanosc += player.getPodaniaKreatywnosc();
+            }
+
+            avgFizycznoscInterakcje /= sum;
+            avgDryblingSkutecznosc /= sum;
+            avgObronaKotrolaPrzeciwnika /= sum;
+            avgPodaniaKreatywanosc /= sum;
+
+            SredniaDruzyny team = new SredniaDruzyny();
+            team.setTeamId(teamId);
+            team.setSeason(season);
+            Optional<StatystykiDruzyny> optionalName = teamStatsRepository.findFirstByTeamId(teamId);
+            optionalName.ifPresent(statystykiDruzyny -> team.setTeamName(statystykiDruzyny.getTeamName()));
+            team.setDryblingSkutecznosc(avgDryblingSkutecznosc);
+            team.setFizycznoscInterakcje(avgFizycznoscInterakcje);
+            team.setPodaniaKreatywnosc(avgPodaniaKreatywanosc);
+            team.setObronaKotrolaPrzeciwnika(avgObronaKotrolaPrzeciwnika);
+
+            sredniaDruzynyRepository.save(team);
         }
     }
 }

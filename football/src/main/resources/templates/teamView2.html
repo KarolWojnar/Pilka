@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.4/Chart.js"></script>
+
+<body>
+<div th:if="${noCompare}">
+    <p th:text="${noCompare}"></p>
+</div>
+<div th:if="${teamsA}">
+    <div th:if="${teamsB}">
+
+        <canvas id="myChart" style="width:100%;max-width:600px"></canvas>
+        <script th:inline="javascript">
+
+            var xValues = [];
+            var teamAData = /*[[${teamsA}]]*/ [];
+            var teamADataArray = [];
+            var teamANames = [];
+            teamAData.forEach(function (team) {
+                xValues.push(team.season);
+                teamADataArray.push(team.raiting);
+                teamANames.push(team.teamName);
+            });
+
+            var teamBData = /*[[${teamsB}]]*/ [];
+            var teamBDataArray = [];
+            var teamBNames = [];
+            teamBData.forEach(function (team) {
+                teamBDataArray.push(team.raiting);
+                teamBNames.push(team.teamName);
+            });
+
+            var raitings = /*[[${raitings}]]*/ [];
+            var avgRaiting = /*[[${avgRaiting} /100 ]]*/;
+
+            new Chart("myChart", {
+                type: "line",
+                data: {
+                    labels: xValues,
+                    datasets: [{
+                        label: teamANames[0],
+                        fill: false,
+                        lineTension: 0,
+                        backgroundColor: "rgba(0,0,255,1.0)",
+                        borderColor: "rgba(0,0,255,0.1)",
+                        data: teamADataArray
+                    },
+                        {
+                            label: teamBNames[0],
+                            fill: false,
+                            lineTension: 0,
+                            backgroundColor: "rgba(255,0,0,1.0)",
+                            borderColor: "rgba(255,0,0,0.1)",
+                            data: teamBDataArray
+                        }]
+                },
+                options: {
+                    legend: { display: true },
+                    scales: {
+                        yAxes: [{
+                            ticks: {
+                                min: Math.min(...raitings) - (avgRaiting * 3),
+                                max: Math.max(...raitings) + (avgRaiting * 3),
+                                stepSize: avgRaiting
+                            }
+                        }],
+                    }
+                }
+            });
+        </script>
+
+    </div>
+</div>
+
+</body>
+
+</html>

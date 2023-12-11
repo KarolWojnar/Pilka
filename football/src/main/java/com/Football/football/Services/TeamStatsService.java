@@ -1,6 +1,10 @@
 package com.Football.football.Services;
 
+import com.Football.football.Repositories.AvgAllRepository;
+import com.Football.football.Repositories.SredniaDruzynyRepository;
 import com.Football.football.Repositories.TeamStatsRepository;
+import com.Football.football.Tables.SredniaDruzyny;
+import com.Football.football.Tables.SredniaZeWszystkiego;
 import com.Football.football.Tables.StatystykiDruzyny;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -12,15 +16,20 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 @Service
 public class TeamStatsService {
     private final TeamStatsRepository teamStatsRepository;
-
+    private final SredniaDruzynyRepository sredniaDruzynyRepository;
+    private final AvgAllRepository avgAllRepository;
     @Autowired
-    public TeamStatsService(TeamStatsRepository teamStatsRepository) {
+    public TeamStatsService(TeamStatsRepository teamStatsRepository, SredniaDruzynyRepository sredniaDruzynyRepository, AvgAllRepository avgAllRepository) {
         this.teamStatsRepository = teamStatsRepository;
+        this.sredniaDruzynyRepository = sredniaDruzynyRepository;
+        this.avgAllRepository = avgAllRepository;
     }
 
     public void updateTeamStats(int teamId, int year) throws IOException, InterruptedException, JSONException {
@@ -132,4 +141,43 @@ public class TeamStatsService {
         }
     }
 
+    public void getSumSum() {
+        double[] weights = {2.0, 1.5, 1, -0.3};
+        Iterable<SredniaDruzyny> allTeams = sredniaDruzynyRepository.findAll();
+        for (SredniaDruzyny team : allTeams) {
+            Optional<SredniaZeWszystkiego> optional = avgAllRepository.findSredniaZeWszystkiegoByTeamIdAndSeason(team.getTeamId(), team.getSeason());
+            if (optional.isPresent()) {
+                SredniaZeWszystkiego updateTeam = optional.get();
+                avgAllRepository.delete(updateTeam);
+            }
+            SredniaZeWszystkiego avgTeam = getSredniaZeWszystkiego(team, weights);
+
+            avgAllRepository.save(avgTeam);
+        }
+    }
+
+    private static SredniaZeWszystkiego getSredniaZeWszystkiego(SredniaDruzyny team, double[] weights) {
+        double summaryWeight = 0.0;
+
+        SredniaZeWszystkiego avgTeam = new SredniaZeWszystkiego();
+
+        summaryWeight += (team.getDryblingSkutecznosc() * weights[0]);
+        summaryWeight += (team.getPodaniaKreatywnosc() * weights[1]);
+        summaryWeight += (team.getObronaKotrolaPrzeciwnika() * weights[2]);
+        summaryWeight += (team.getFizycznoscInterakcje() * weights[3]);
+
+        avgTeam.setRaiting(summaryWeight);
+        avgTeam.setTeamName(team.getTeamName());
+        avgTeam.setTeamId(team.getTeamId());
+        avgTeam.setSeason(team.getSeason());
+        avgTeam.setCzyUwzglednionePozycje(false);
+        return avgTeam;
+    }
+
+    public List<Double> getAllRaitings(Iterable<SredniaZeWszystkiego> a, Iterable<SredniaZeWszystkiego> b) {
+        List<Double> raitings = new ArrayList<>();
+        for (SredniaZeWszystkiego team : a) raitings.add(team.getRaiting());
+        for (SredniaZeWszystkiego team : b) raitings.add(team.getRaiting());
+        return raitings;
+    }
 }
