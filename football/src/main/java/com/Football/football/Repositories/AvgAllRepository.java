@@ -8,6 +8,6 @@ import java.util.List;
 import java.util.Optional;
 
 public interface AvgAllRepository extends CrudRepository<SredniaZeWszystkiego, Long> {
-    Optional<SredniaZeWszystkiego> findSredniaZeWszystkiegoByTeamIdAndSeason(Long id, Long year);
+    Optional<SredniaZeWszystkiego> findSredniaZeWszystkiegoByTeamIdAndSeasonAndCzyUwzglednionePozycje(Long id, Long year,boolean isPos);
     Iterable<SredniaZeWszystkiego> getSredniaZeWszystkiegoByTeamIdAndCzyUwzglednionePozycjeOrderBySeasonAsc(Long teamId, boolean isPozycja);
 }

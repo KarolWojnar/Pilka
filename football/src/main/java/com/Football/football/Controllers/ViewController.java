@@ -2,10 +2,7 @@ package com.Football.football.Controllers;
 
 import com.Football.football.Repositories.*;
 import com.Football.football.Services.TeamStatsService;
-import com.Football.football.Tables.PogrupowaneStatystykiZawodnikow;
-import com.Football.football.Tables.SredniaDruzyny;
-import com.Football.football.Tables.SredniaZeWszystkiego;
-import com.Football.football.Tables.StatystykiZawodnika;
+import com.Football.football.Tables.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -17,9 +14,9 @@ import java.util.*;
 @Controller
 public class ViewController {
     @Autowired
-    private StatystykiZawodnikaRepository statystykiZawodnikaRepository;
-    @Autowired
     private SredniaDruzynyRepository sredniaDruzynyRepository;
+    @Autowired
+    private SrDruzynyPozycjeRepository srDruzynyPozycjeRepository;
     @Autowired
     private PogrupowaneRepository pogrupowaneRepository;
     @Autowired
@@ -45,15 +42,6 @@ public class ViewController {
         return "playerView2";
     }
 
-    @GetMapping("/playerByName/{name}")
-    public String getProfilPlayer(@PathVariable String name, Model model) {
-        List<StatystykiZawodnika> optionalPlayers = statystykiZawodnikaRepository.getStatystykiZawodnikaByImieContaining(name);
-        if (!optionalPlayers.isEmpty()){
-            for (StatystykiZawodnika player : optionalPlayers) model.addAttribute("player", player);
-        } else model.addAttribute("noPlayer", "Nie ma takiego zawodnika");
-        return "playerView";
-    }
-
     @GetMapping("/compare/year/{year}/teams/{teamA}&{teamB}")
     public String compareTeams(@PathVariable Long year, @PathVariable Long teamA, @PathVariable Long teamB, Model model) {
         Optional<SredniaDruzyny> optionalTeamA = sredniaDruzynyRepository.getSredniaDruzynyByTeamIdAndSeason(teamA, year);
@@ -69,18 +57,39 @@ public class ViewController {
         return "teamView";
     }
 
-    @GetMapping("/compare-raiting/teams/{teamA}&{teamB}/pos={isPosition}")
-    public String compareRaiting(Model model, @PathVariable Long teamA, @PathVariable Long teamB, @PathVariable boolean isPosition) {
-        Iterable<SredniaZeWszystkiego> teamsA = avgAllRepository.getSredniaZeWszystkiegoByTeamIdAndCzyUwzglednionePozycjeOrderBySeasonAsc(teamA, isPosition);
-        Iterable<SredniaZeWszystkiego> teamsB = avgAllRepository.getSredniaZeWszystkiegoByTeamIdAndCzyUwzglednionePozycjeOrderBySeasonAsc(teamB, isPosition);
+    @GetMapping("/compare/year/{year}/team/{teamId}")
+    public String compareTeams(@PathVariable Long year, @PathVariable Long teamId, Model model) {
+        Optional<SredniaDruzyny> optionalTeamA = sredniaDruzynyRepository.getSredniaDruzynyByTeamIdAndSeason(teamId, year);
+        if (optionalTeamA.isPresent()) {
+            Optional<SredniaDruzynyPozycjeUwzglednione> optionalTeamB = srDruzynyPozycjeRepository.getSredniaDruzynyPozycjeUwzglednioneByTeamIdAndSeason(teamId, year);
+            if (optionalTeamB.isPresent()) {
+                SredniaDruzyny TeamA = optionalTeamA.get();
+                SredniaDruzynyPozycjeUwzglednione TeamB = optionalTeamB.get();
+                TeamB.setTeamName(TeamB.getTeamName() + " z pozycją");
+                model.addAttribute("TeamA", TeamA);
+                model.addAttribute("TeamB", TeamB);
+            } else model.addAttribute("noTeams", "Nie można porównać tych drużyn.");
+        } else model.addAttribute("noTeams", "Nie można porównać tych drużyn.");
+        return "teamView";
+    }
+
+    @GetMapping("/compare-raiting/teams/{teamA}&{teamB}")
+    public String compareRaiting(Model model, @PathVariable Long teamA, @PathVariable Long teamB) {
+        Iterable<SredniaZeWszystkiego> teamsA = avgAllRepository.getSredniaZeWszystkiegoByTeamIdAndCzyUwzglednionePozycjeOrderBySeasonAsc(teamA, false);
+        Iterable<SredniaZeWszystkiego> PosTeamsA = avgAllRepository.getSredniaZeWszystkiegoByTeamIdAndCzyUwzglednionePozycjeOrderBySeasonAsc(teamA, true);
+        Iterable<SredniaZeWszystkiego> teamsB = avgAllRepository.getSredniaZeWszystkiegoByTeamIdAndCzyUwzglednionePozycjeOrderBySeasonAsc(teamB, false);
+        Iterable<SredniaZeWszystkiego> PosTeamsB = avgAllRepository.getSredniaZeWszystkiegoByTeamIdAndCzyUwzglednionePozycjeOrderBySeasonAsc(teamB, true);
 
         Iterator<SredniaZeWszystkiego> optionalTeamA = teamsA.iterator();
         Iterator<SredniaZeWszystkiego> optionalTeamB = teamsB.iterator();
 
-        if (optionalTeamA.hasNext() && optionalTeamB.hasNext()) {
+        Iterator<SredniaZeWszystkiego> PosOptionalTeamA = PosTeamsA.iterator();
+        Iterator<SredniaZeWszystkiego> PosOptionalTeamB = PosTeamsB.iterator();
+
+        if (optionalTeamA.hasNext() && optionalTeamB.hasNext() && PosOptionalTeamA.hasNext() && PosOptionalTeamB.hasNext()) {
             List<Double> raitings;
 
-            raitings = teamStatsService.getAllRaitings(teamsA, teamsB);
+            raitings = teamStatsService.getAllRaitings(teamsA, teamsB, PosTeamsA, PosTeamsB);
 
             model.addAttribute("minRaiting", Collections.max(raitings));
             model.addAttribute("raitings", raitings);
@@ -88,6 +97,8 @@ public class ViewController {
             model.addAttribute("avgRaiting", (Collections.max(raitings) + Collections.min(raitings)) / 2);
             model.addAttribute("teamsA", teamsA);
             model.addAttribute("teamsB", teamsB);
+            model.addAttribute("PosTeamsA", PosTeamsA);
+            model.addAttribute("PosTeamsB", PosTeamsB);
 
         } else model.addAttribute("noCompare", "Brak druzyn do porownania");
 

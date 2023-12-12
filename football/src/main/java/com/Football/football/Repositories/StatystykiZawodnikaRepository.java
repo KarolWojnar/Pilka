@@ -12,6 +12,8 @@ public interface StatystykiZawodnikaRepository extends CrudRepository<Statystyki
 
     Optional<StatystykiZawodnika> getStatystykiZawodnikaById(Long id);
     Optional<StatystykiZawodnika> getStatystykiZawodnikaByTeamIdAndSeason(Long id, Long season);
+
+    Iterable<StatystykiZawodnika> getStatystykiZawodnikasByPozycja(String pos);
     List<StatystykiZawodnika> getStatystykiZawodnikaByImieContaining(String name);
 
     @Query("SELECT DISTINCT s.season, s.teamId FROM StatystykiZawodnika s")

@@ -1,13 +1,7 @@
 package com.Football.football.Services;
 
-import com.Football.football.Repositories.PogrupowaneRepository;
-import com.Football.football.Repositories.SredniaDruzynyRepository;
-import com.Football.football.Repositories.StatystykiZawodnikaRepository;
-import com.Football.football.Repositories.TeamStatsRepository;
-import com.Football.football.Tables.PogrupowaneStatystykiZawodnikow;
-import com.Football.football.Tables.SredniaDruzyny;
-import com.Football.football.Tables.StatystykiDruzyny;
-import com.Football.football.Tables.StatystykiZawodnika;
+import com.Football.football.Repositories.*;
+import com.Football.football.Tables.*;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -29,13 +23,17 @@ public class PlayerStatsService {
     private final TeamStatsRepository teamStatsRepository;
     private final PogrupowaneRepository pogrupowaneRepository;
     private final SredniaDruzynyRepository sredniaDruzynyRepository;
+    private final PogrupowanePozycjamiRepository pogrupowanePozycjamiRepository;
+    private final SrDruzynyPozycjeRepository srDruzynyPozycjeRepository;
 
     @Autowired
-    public PlayerStatsService(StatystykiZawodnikaRepository statystykiZawodnikaRepository, TeamStatsRepository teamStatsRepository, PogrupowaneRepository pogrupowaneRepository, SredniaDruzynyRepository sredniaDruzynyRepository) {
+    public PlayerStatsService(StatystykiZawodnikaRepository statystykiZawodnikaRepository, TeamStatsRepository teamStatsRepository, PogrupowaneRepository pogrupowaneRepository, SredniaDruzynyRepository sredniaDruzynyRepository, PogrupowanePozycjamiRepository pogrupowanePozycjamiRepository, SrDruzynyPozycjeRepository srDruzynyPozycjeRepository) {
         this.statystykiZawodnikaRepository = statystykiZawodnikaRepository;
         this.teamStatsRepository = teamStatsRepository;
         this.pogrupowaneRepository = pogrupowaneRepository;
         this.sredniaDruzynyRepository = sredniaDruzynyRepository;
+        this.pogrupowanePozycjamiRepository = pogrupowanePozycjamiRepository;
+        this.srDruzynyPozycjeRepository = srDruzynyPozycjeRepository;
     }
 
     public void updatePlayerStats(int teamId, int season) throws IOException, InterruptedException, JSONException {
@@ -140,8 +138,7 @@ public class PlayerStatsService {
         }
     }
 
-    public void getAvgOfAllPlayers() {
-        Iterable<StatystykiZawodnika> players = statystykiZawodnikaRepository.findAll();
+    public void getAvgOfAllPlayers(Iterable<StatystykiZawodnika> players, boolean isPositions) {
         Iterable<StatystykiDruzyny> teams = teamStatsRepository.findAll();
 
         double fixturesCount = calculateFixtureCount(teams);
@@ -150,7 +147,7 @@ public class PlayerStatsService {
 
         teamSum = calculateAverages(playerSum, teamSum, fixturesCount);
         double[] weights = calcculateWeights(playerSum, teamSum);
-        calculateWeightAndSave(players, weights);
+        calculateWeightAndSave(players, weights, isPositions);
     }
 
     private double calculateTeamGoalsSum(Iterable<StatystykiDruzyny> teams) {
@@ -202,45 +199,84 @@ public class PlayerStatsService {
         weights[11] = 90 / teamGoalsSum;
         return weights;
     }
-    private void calculateWeightAndSave(Iterable<StatystykiZawodnika> players, double[] weights) {
+    private void calculateWeightAndSave(Iterable<StatystykiZawodnika> players, double[] weights, boolean isPos) {
         for (StatystykiZawodnika player : players) {
-            Optional<PogrupowaneStatystykiZawodnikow> optionalPlayer = pogrupowaneRepository.getPogrupowaneStatystykiZawodnikowByPlayerIdAndSeason(player.getPlayerId(), player.getSeason());
+            if (!isPos) {
+                Optional<PogrupowaneStatystykiZawodnikow> optionalPlayer = pogrupowaneRepository.getPogrupowaneStatystykiZawodnikowByPlayerIdAndSeason(player.getPlayerId(), player.getSeason());
+                PogrupowaneStatystykiZawodnikow zawodnik = new PogrupowaneStatystykiZawodnikow();
+                zawodnik.setImie(player.getImie() + " " + player.getNazwisko());
+                zawodnik.setPlayerId(player.getPlayerId());
+                zawodnik.setTeamId(player.getTeamId());
+                zawodnik.setSeason(player.getSeason());
+                zawodnik.setPozycja(player.getPozycja());
 
-            PogrupowaneStatystykiZawodnikow zawodnik = new PogrupowaneStatystykiZawodnikow();
-            zawodnik.setImie(player.getImie() + " " + player.getNazwisko());
-            zawodnik.setPlayerId(player.getPlayerId());
-            zawodnik.setTeamId(player.getTeamId());
-            zawodnik.setSeason(player.getSeason());
-            zawodnik.setPozycja(player.getPozycja());
+                double minutes = player.getMinuty();
 
-            double minutes = player.getMinuty();
+                double accuracyPerMinute = ((player.getPodania() * (player.getDokladnoscPodan() / 100)) / minutes) * weights[0];
+                double keysPerMinute = (player.getPodaniaKluczowe() / minutes) * weights[1];
+                double assistsPerMinute = (player.getAsysty() / minutes) * weights[11];
+                zawodnik.setPodaniaKreatywnosc(accuracyPerMinute + keysPerMinute + assistsPerMinute);
 
-            double accuracyPerMinute = ((player.getPodania() * (player.getDokladnoscPodan() / 100)) / minutes) * weights[0];
-            double keysPerMinute = (player.getPodaniaKluczowe() / minutes) * weights[1];
-            double assistsPerMinute = (player.getAsysty() / minutes) * weights[11];
-            zawodnik.setPodaniaKreatywnosc(accuracyPerMinute + keysPerMinute + assistsPerMinute);
+                double wonDribblingsPerMinute = (player.getDryblingiWygrane() / minutes) * weights[2];
+                double shotsOnGoalPerMinute = (player.getStrzalyCelne() / minutes) * weights[3];
+                double goalsPerMinute = (player.getGole() / minutes) * weights[11];
+                zawodnik.setDryblingSkutecznosc(wonDribblingsPerMinute + shotsOnGoalPerMinute + goalsPerMinute);
 
-            double wonDribblingsPerMinute = (player.getDryblingiWygrane() / minutes) * weights[2];
-            double shotsOnGoalPerMinute = (player.getStrzalyCelne() / minutes) * weights[3];
-            double goalsPerMinute = (player.getGole() / minutes) * weights[11];
-            zawodnik.setDryblingSkutecznosc(wonDribblingsPerMinute + shotsOnGoalPerMinute + goalsPerMinute);
+                double foulsCommitedPerMinute = (player.getFaulePopelnione() / minutes) * weights[4];
+                double redCards = (player.getKartkiCzerwone() / minutes) * weights[5];
+                double yellowCards = (player.getKartkiZolte() / minutes) * weights[6];
+                double duelsLostPerMinute = ((player.getPojedynki() - player.getPojedynkiWygrane()) / minutes) * weights[7];
+                zawodnik.setFizycznoscInterakcje(foulsCommitedPerMinute + redCards + yellowCards + duelsLostPerMinute);
 
-            double foulsCommitedPerMinute = (player.getFaulePopelnione() / minutes) * weights[4];
-            double redCards = (player.getKartkiCzerwone() / minutes) * weights[5];
-            double yellowCards = (player.getKartkiZolte() / minutes) * weights[6];
-            double duelsLostPerMinute = ((player.getPojedynki() - player.getPojedynkiWygrane()) / minutes) * weights[7];
-            zawodnik.setFizycznoscInterakcje(foulsCommitedPerMinute + redCards + yellowCards + duelsLostPerMinute);
+                double interceptionsWonPerMinute = (player.getPrzechwytyUdane() / minutes) * weights[8];
+                double foulsDrawnPerMinute = (player.getFauleNaZawodniku() / minutes) * weights[9];
+                double duelsWonPerMinute = (player.getPojedynkiWygrane() / minutes) * weights[10];
+                zawodnik.setObronaKotrolaPrzeciwnika(interceptionsWonPerMinute + foulsDrawnPerMinute + duelsWonPerMinute);
 
-            double interceptionsWonPerMinute = (player.getPrzechwytyUdane() / minutes) * weights[8];
-            double foulsDrawnPerMinute = (player.getFauleNaZawodniku() / minutes) * weights[9];
-            double duelsWonPerMinute = (player.getPojedynkiWygrane() / minutes) * weights[10];
-            zawodnik.setObronaKotrolaPrzeciwnika(interceptionsWonPerMinute + foulsDrawnPerMinute + duelsWonPerMinute);
+                if (optionalPlayer.isPresent()) {
+                    PogrupowaneStatystykiZawodnikow updatePlayer = optionalPlayer.get();
+                    pogrupowaneRepository.delete(updatePlayer);
+                }
+                pogrupowaneRepository.save(zawodnik);
+            } else {
+                Optional<PogrupowaneStatsZawodPozycjeUwzglednione> optionalPlayer = pogrupowanePozycjamiRepository.getPogrypowaneStatsZawodPozycjeUwzglednioneByPlayerIdAndSeason(player.getPlayerId(), player.getSeason());
+                PogrupowaneStatsZawodPozycjeUwzglednione zawodnik = new PogrupowaneStatsZawodPozycjeUwzglednione();
 
-            if (optionalPlayer.isPresent()) {
-                PogrupowaneStatystykiZawodnikow updatePlayer = optionalPlayer.get();
-                pogrupowaneRepository.delete(updatePlayer);
+                zawodnik.setImie(player.getImie() + " " + player.getNazwisko());
+                zawodnik.setPlayerId(player.getPlayerId());
+                zawodnik.setTeamId(player.getTeamId());
+                zawodnik.setSeason(player.getSeason());
+                zawodnik.setPozycja(player.getPozycja());
+
+                double minutes = player.getMinuty();
+
+                double accuracyPerMinute = ((player.getPodania() * (player.getDokladnoscPodan() / 100)) / minutes) * weights[0];
+                double keysPerMinute = (player.getPodaniaKluczowe() / minutes) * weights[1];
+                double assistsPerMinute = (player.getAsysty() / minutes) * weights[11];
+                zawodnik.setPodaniaKreatywnosc(accuracyPerMinute + keysPerMinute + assistsPerMinute);
+
+                double wonDribblingsPerMinute = (player.getDryblingiWygrane() / minutes) * weights[2];
+                double shotsOnGoalPerMinute = (player.getStrzalyCelne() / minutes) * weights[3];
+                double goalsPerMinute = (player.getGole() / minutes) * weights[11];
+                zawodnik.setDryblingSkutecznosc(wonDribblingsPerMinute + shotsOnGoalPerMinute + goalsPerMinute);
+
+                double foulsCommitedPerMinute = (player.getFaulePopelnione() / minutes) * weights[4];
+                double redCards = (player.getKartkiCzerwone() / minutes) * weights[5];
+                double yellowCards = (player.getKartkiZolte() / minutes) * weights[6];
+                double duelsLostPerMinute = ((player.getPojedynki() - player.getPojedynkiWygrane()) / minutes) * weights[7];
+                zawodnik.setFizycznoscInterakcje(foulsCommitedPerMinute + redCards + yellowCards + duelsLostPerMinute);
+
+                double interceptionsWonPerMinute = (player.getPrzechwytyUdane() / minutes) * weights[8];
+                double foulsDrawnPerMinute = (player.getFauleNaZawodniku() / minutes) * weights[9];
+                double duelsWonPerMinute = (player.getPojedynkiWygrane() / minutes) * weights[10];
+                zawodnik.setObronaKotrolaPrzeciwnika(interceptionsWonPerMinute + foulsDrawnPerMinute + duelsWonPerMinute);
+
+                if (optionalPlayer.isPresent()) {
+                    PogrupowaneStatsZawodPozycjeUwzglednione updatePlayer = optionalPlayer.get();
+                    pogrupowanePozycjamiRepository.delete(updatePlayer);
+                }
+                pogrupowanePozycjamiRepository.save(zawodnik);
             }
-            pogrupowaneRepository.save(zawodnik);
         }
     }
 
@@ -282,6 +318,47 @@ public class PlayerStatsService {
             team.setObronaKotrolaPrzeciwnika(avgObronaKotrolaPrzeciwnika);
 
             sredniaDruzynyRepository.save(team);
+        }
+    }
+
+    public void getSummaryWithPos() {
+        List<Object[]> combinationsTeamsAndSeasons = statystykiZawodnikaRepository.getDistinctBySeasonAndTeamId();
+        for (Object[] singleCombination : combinationsTeamsAndSeasons) {
+            Long season = (Long) singleCombination[0];
+            Long teamId = (Long) singleCombination[1];
+
+            List<PogrupowaneStatsZawodPozycjeUwzglednione> players = pogrupowanePozycjamiRepository.getPogrypowaneStatsZawodPozycjeUwzglednioneByTeamIdAndSeason(teamId, season);
+            Optional<SredniaDruzynyPozycjeUwzglednione> optionalSredniaDruzyny = srDruzynyPozycjeRepository.getSredniaDruzynyPozycjeUwzglednioneByTeamIdAndSeason(teamId, season);
+            if (optionalSredniaDruzyny.isPresent()) {
+                SredniaDruzynyPozycjeUwzglednione prevTeam = optionalSredniaDruzyny.get();
+                srDruzynyPozycjeRepository.delete(prevTeam);
+            }
+            double sum = 0, avgPodaniaKreatywanosc = 0, avgDryblingSkutecznosc = 0, avgFizycznoscInterakcje = 0, avgObronaKotrolaPrzeciwnika = 0;
+
+            for (PogrupowaneStatsZawodPozycjeUwzglednione player : players) {
+                sum++;
+                avgFizycznoscInterakcje += player.getFizycznoscInterakcje();
+                avgDryblingSkutecznosc += player.getDryblingSkutecznosc();
+                avgObronaKotrolaPrzeciwnika += player.getObronaKotrolaPrzeciwnika();
+                avgPodaniaKreatywanosc += player.getPodaniaKreatywnosc();
+            }
+
+            avgFizycznoscInterakcje /= sum;
+            avgDryblingSkutecznosc /= sum;
+            avgObronaKotrolaPrzeciwnika /= sum;
+            avgPodaniaKreatywanosc /= sum;
+
+            SredniaDruzynyPozycjeUwzglednione team = new SredniaDruzynyPozycjeUwzglednione();
+            team.setTeamId(teamId);
+            team.setSeason(season);
+            Optional<StatystykiDruzyny> optionalName = teamStatsRepository.findFirstByTeamId(teamId);
+            optionalName.ifPresent(statystykiDruzyny -> team.setTeamName(statystykiDruzyny.getTeamName()));
+            team.setDryblingSkutecznosc(avgDryblingSkutecznosc);
+            team.setFizycznoscInterakcje(avgFizycznoscInterakcje);
+            team.setPodaniaKreatywnosc(avgPodaniaKreatywanosc);
+            team.setObronaKotrolaPrzeciwnika(avgObronaKotrolaPrzeciwnika);
+
+            srDruzynyPozycjeRepository.save(team);
         }
     }
 }

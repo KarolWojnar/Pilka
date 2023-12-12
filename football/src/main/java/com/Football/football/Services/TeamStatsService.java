@@ -1,9 +1,11 @@
 package com.Football.football.Services;
 
 import com.Football.football.Repositories.AvgAllRepository;
+import com.Football.football.Repositories.SrDruzynyPozycjeRepository;
 import com.Football.football.Repositories.SredniaDruzynyRepository;
 import com.Football.football.Repositories.TeamStatsRepository;
 import com.Football.football.Tables.SredniaDruzyny;
+import com.Football.football.Tables.SredniaDruzynyPozycjeUwzglednione;
 import com.Football.football.Tables.SredniaZeWszystkiego;
 import com.Football.football.Tables.StatystykiDruzyny;
 import org.json.JSONException;
@@ -24,11 +26,13 @@ import java.util.Optional;
 public class TeamStatsService {
     private final TeamStatsRepository teamStatsRepository;
     private final SredniaDruzynyRepository sredniaDruzynyRepository;
+    private final SrDruzynyPozycjeRepository srDruzynyPozycjeRepository;
     private final AvgAllRepository avgAllRepository;
     @Autowired
-    public TeamStatsService(TeamStatsRepository teamStatsRepository, SredniaDruzynyRepository sredniaDruzynyRepository, AvgAllRepository avgAllRepository) {
+    public TeamStatsService(TeamStatsRepository teamStatsRepository, SredniaDruzynyRepository sredniaDruzynyRepository, SrDruzynyPozycjeRepository srDruzynyPozycjeRepository, AvgAllRepository avgAllRepository) {
         this.teamStatsRepository = teamStatsRepository;
         this.sredniaDruzynyRepository = sredniaDruzynyRepository;
+        this.srDruzynyPozycjeRepository = srDruzynyPozycjeRepository;
         this.avgAllRepository = avgAllRepository;
     }
 
@@ -145,18 +149,32 @@ public class TeamStatsService {
         double[] weights = {2.0, 1.5, 1, -0.3};
         Iterable<SredniaDruzyny> allTeams = sredniaDruzynyRepository.findAll();
         for (SredniaDruzyny team : allTeams) {
-            Optional<SredniaZeWszystkiego> optional = avgAllRepository.findSredniaZeWszystkiegoByTeamIdAndSeason(team.getTeamId(), team.getSeason());
+            Optional<SredniaZeWszystkiego> optional = avgAllRepository.findSredniaZeWszystkiegoByTeamIdAndSeasonAndCzyUwzglednionePozycje(team.getTeamId(), team.getSeason(), false);
             if (optional.isPresent()) {
                 SredniaZeWszystkiego updateTeam = optional.get();
                 avgAllRepository.delete(updateTeam);
             }
-            SredniaZeWszystkiego avgTeam = getSredniaZeWszystkiego(team, weights);
+            SredniaZeWszystkiego avgTeam = getSredniaZeWszystkiego(team, weights, false);
 
             avgAllRepository.save(avgTeam);
         }
     }
 
-    private static SredniaZeWszystkiego getSredniaZeWszystkiego(SredniaDruzyny team, double[] weights) {
+    public void getSumSumWPos() {
+        double[] weights = {2.0, 1.5, 1, -0.3};
+        Iterable<SredniaDruzynyPozycjeUwzglednione> allTeams = srDruzynyPozycjeRepository.findAll();
+        for (SredniaDruzynyPozycjeUwzglednione team : allTeams) {
+            Optional<SredniaZeWszystkiego> optional = avgAllRepository.findSredniaZeWszystkiegoByTeamIdAndSeasonAndCzyUwzglednionePozycje(team.getTeamId(), team.getSeason(), true);
+            if (optional.isPresent()) {
+                SredniaZeWszystkiego updateTeam = optional.get();
+                avgAllRepository.delete(updateTeam);
+            }
+            SredniaZeWszystkiego avgTeam = getSredniaZeWszystkiegoPos(team, weights, true);
+
+            avgAllRepository.save(avgTeam);
+        }
+    }
+    private static SredniaZeWszystkiego getSredniaZeWszystkiegoPos(SredniaDruzynyPozycjeUwzglednione team, double[] weights, boolean isPos) {
         double summaryWeight = 0.0;
 
         SredniaZeWszystkiego avgTeam = new SredniaZeWszystkiego();
@@ -170,14 +188,34 @@ public class TeamStatsService {
         avgTeam.setTeamName(team.getTeamName());
         avgTeam.setTeamId(team.getTeamId());
         avgTeam.setSeason(team.getSeason());
-        avgTeam.setCzyUwzglednionePozycje(false);
+        avgTeam.setCzyUwzglednionePozycje(isPos);
         return avgTeam;
     }
 
-    public List<Double> getAllRaitings(Iterable<SredniaZeWszystkiego> a, Iterable<SredniaZeWszystkiego> b) {
+    private static SredniaZeWszystkiego getSredniaZeWszystkiego(SredniaDruzyny team, double[] weights, boolean isPos) {
+        double summaryWeight = 0.0;
+
+        SredniaZeWszystkiego avgTeam = new SredniaZeWszystkiego();
+
+        summaryWeight += (team.getDryblingSkutecznosc() * weights[0]);
+        summaryWeight += (team.getPodaniaKreatywnosc() * weights[1]);
+        summaryWeight += (team.getObronaKotrolaPrzeciwnika() * weights[2]);
+        summaryWeight += (team.getFizycznoscInterakcje() * weights[3]);
+
+        avgTeam.setRaiting(summaryWeight);
+        avgTeam.setTeamName(team.getTeamName());
+        avgTeam.setTeamId(team.getTeamId());
+        avgTeam.setSeason(team.getSeason());
+        avgTeam.setCzyUwzglednionePozycje(isPos);
+        return avgTeam;
+    }
+
+    public List<Double> getAllRaitings(Iterable<SredniaZeWszystkiego> a, Iterable<SredniaZeWszystkiego> b, Iterable<SredniaZeWszystkiego> c, Iterable<SredniaZeWszystkiego> d) {
         List<Double> raitings = new ArrayList<>();
         for (SredniaZeWszystkiego team : a) raitings.add(team.getRaiting());
         for (SredniaZeWszystkiego team : b) raitings.add(team.getRaiting());
+        for (SredniaZeWszystkiego team : c) raitings.add(team.getRaiting());
+        for (SredniaZeWszystkiego team : d) raitings.add(team.getRaiting());
         return raitings;
     }
 }
