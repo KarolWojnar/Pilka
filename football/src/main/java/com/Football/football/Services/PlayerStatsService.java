@@ -7,6 +7,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.ui.Model;
 
 import java.io.IOException;
 import java.net.URI;
@@ -36,17 +37,19 @@ public class PlayerStatsService {
         this.srDruzynyPozycjeRepository = srDruzynyPozycjeRepository;
     }
 
-    public void updatePlayerStats(int teamId, int season) throws IOException, InterruptedException, JSONException {
+    public String updatePlayerStats(int teamId, int season, int leagueId) throws IOException, InterruptedException, JSONException {
+        StringBuilder all = new StringBuilder();
         for (int page = 1; page <= 3; page++) {
             HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create("https://api-football-beta.p.rapidapi.com/players?season=" + season + "&league=140&team=" + teamId + "&page=" + page))
-                    .header("X-RapidAPI-Key", "d33e623437msha2a56a1ea6f5bfbp18d606jsndd5dc6ff099b")
+                    .uri(URI.create("https://api-football-beta.p.rapidapi.com/players?season=" + season + "&league=" + leagueId +"&team=" + teamId + "&page=" + page))
+                    .header("X-RapidAPI-Key", "ffd6a2d4f7mshd804fef0d09cb33p131f2bjsnf34096b2c4ec")
                     .header("X-RapidAPI-Host", "api-football-beta.p.rapidapi.com")
                     .method("GET", HttpRequest.BodyPublishers.noBody())
                     .build();
 
             HttpResponse<String> response = HttpClient.newHttpClient().send(request, HttpResponse.BodyHandlers.ofString());
             String responseBody = response.body();
+            all.append(responseBody);
             JSONObject jsonResponse = new JSONObject(responseBody);
             if (jsonResponse.has("response")) {
                 JSONArray statsArray = jsonResponse.getJSONArray("response");
@@ -55,8 +58,8 @@ public class PlayerStatsService {
                         JSONObject playerStats = statsArray.getJSONObject(i);
                         int isActive = playerStats.getJSONArray("statistics").getJSONObject(0).getJSONObject("games").optInt("minutes", 0);
                         if (isActive == 0) continue;
-
-                        Optional<StatystykiZawodnika> optional = statystykiZawodnikaRepository.getStatystykiZawodnikaByTeamIdAndSeason(playerStats.getJSONObject("player").getLong("id"), (long) season);
+                        System.out.println(playerStats.getJSONObject("player").getInt("id") + " " + season);
+                        Optional<StatystykiZawodnika> optional = statystykiZawodnikaRepository.getStatystykiZawodnikaByPlayerIdAndTeamIdAndSeason(playerStats.getJSONObject("player").getInt("id"), teamId, season);
 
                         if (optional.isPresent()) {
                             StatystykiZawodnika toUpdate = optional.get();
@@ -64,6 +67,7 @@ public class PlayerStatsService {
                         }
 
                         StatystykiZawodnika player = new StatystykiZawodnika();
+
                         player.setTeamId((long) teamId);
                         player.setSeason((long) season);
                         player.setPlayerId(playerStats.getJSONObject("player").getLong("id"));
@@ -76,66 +80,55 @@ public class PlayerStatsService {
                                 .replaceAll(" kg", "").replaceAll("\n", "0").replaceAll("null", "0")));
                         player.setKraj(playerStats.getJSONObject("player").optString("nationality"));
                         player.setCzyKontuzjowany((playerStats.getJSONObject("player").getString("injured")).equals("true"));
-                        if (playerStats.has("statistics")) {
-                            JSONArray statisticsArray = playerStats.getJSONArray("statistics");
-                            if (statisticsArray.length() > 0) {
-                                JSONObject statistics = statisticsArray.getJSONObject(0);
-                                if (statistics.has("games")) {
-                                    JSONObject games = statistics.getJSONObject("games");
-                                    player.setWystepy(games.optDouble("appearences", 0));
-                                    player.setMinuty(games.optDouble("minutes", 0));
-                                    player.setPozycja(games.getString("position"));
-                                    player.setRating(games.optDouble("rating", 0));
-                                    if ((player.getMinuty() == 0) || (player.getRating() == 0)) continue;
-                                }
-                                if (statistics.has("shots")) {
-                                    JSONObject shots = statistics.getJSONObject("shots");
-                                    player.setStrzaly(shots.optDouble("total", 0));
-                                    player.setStrzalyCelne(shots.optDouble("on", 0));
-                                }
-                                if (statistics.has("goals")) {
-                                    JSONObject goals = statistics.getJSONObject("goals");
-                                    player.setGole(goals.optDouble("total", 0));
-                                    player.setAsysty(goals.optDouble("assists", 0));
-                                }
-                                if (statistics.has("passes")) {
-                                    JSONObject passes = statistics.getJSONObject("passes");
-                                    player.setPodania(passes.optDouble("total", 0));
-                                    player.setDokladnoscPodan(passes.optDouble("accuracy", 0));
-                                    player.setPodaniaKluczowe(passes.optDouble("key", 0));
-                                }
-                                if (statistics.has("duels")) {
-                                    JSONObject duels = statistics.getJSONObject("duels");
-                                    player.setPojedynki(duels.optDouble("total", 0));
-                                    player.setPojedynkiWygrane(duels.optDouble("won", 0));
-                                }
-                                if (statistics.has("dribbles")) {
-                                    JSONObject dribbles = statistics.getJSONObject("dribbles");
-                                    player.setDryblingi(dribbles.optDouble("attempts", 0));
-                                    player.setDryblingiWygrane(dribbles.optDouble("success", 0));
-                                }
-                                if (statistics.has("fouls")) {
-                                    JSONObject fouls = statistics.getJSONObject("fouls");
-                                    player.setFaulePopelnione(fouls.optDouble("committed", 0));
-                                    player.setFauleNaZawodniku(fouls.optDouble("drawn", 0));
-                                }
-                                if (statistics.has("cards")) {
-                                    JSONObject cards = statistics.getJSONObject("cards");
-                                    player.setKartkiZolte(cards.optDouble("yellow", 0));
-                                    player.setKartkiCzerwone(cards.optDouble("red", 0));
-                                }
-                                if (statistics.has("tackles")) {
-                                    JSONObject tackles = statistics.getJSONObject("tackles");
-                                    player.setProbyPrzechwytu(tackles.optDouble("total", 0));
-                                    player.setPrzechwytyUdane(tackles.optDouble("interceptions", 0));
-                                }
+
+                        JSONArray statisticsArray = playerStats.getJSONArray("statistics");
+                        if (statisticsArray.length() > 0) {
+                            JSONObject statistics = statisticsArray.getJSONObject(0);
+
+                            JSONObject games = statistics.getJSONObject("games");
+
+                            player.setWystepy(games.optDouble("appearences", 0));
+                            player.setMinuty(games.optDouble("minutes", 0));
+                            player.setPozycja(games.getString("position"));
+                            player.setRating(games.optDouble("rating", 0));
+
+                            if ((player.getMinuty() == 0) || (player.getRating() == 0)) {
+                                statystykiZawodnikaRepository.delete(player);
+                                continue;
                             }
+
+                            JSONObject shots = statistics.getJSONObject("shots");
+                            player.setStrzaly(shots.optDouble("total", 0));
+                            player.setStrzalyCelne(shots.optDouble("on", 0));
+                            JSONObject goals = statistics.getJSONObject("goals");
+                            player.setGole(goals.optDouble("total", 0));
+                            player.setAsysty(goals.optDouble("assists", 0));
+                            JSONObject passes = statistics.getJSONObject("passes");
+                            player.setPodania(passes.optDouble("total", 0));
+                            player.setDokladnoscPodan(passes.optDouble("accuracy", 0));
+                            player.setPodaniaKluczowe(passes.optDouble("key", 0));
+                            JSONObject duels = statistics.getJSONObject("duels");
+                            player.setPojedynki(duels.optDouble("total", 0));
+                            player.setPojedynkiWygrane(duels.optDouble("won", 0));
+                            JSONObject dribbles = statistics.getJSONObject("dribbles");
+                            player.setDryblingi(dribbles.optDouble("attempts", 0));
+                            player.setDryblingiWygrane(dribbles.optDouble("success", 0));
+                            JSONObject fouls = statistics.getJSONObject("fouls");
+                            player.setFaulePopelnione(fouls.optDouble("committed", 0));
+                            player.setFauleNaZawodniku(fouls.optDouble("drawn", 0));
+                            JSONObject cards = statistics.getJSONObject("cards");
+                            player.setKartkiZolte(cards.optDouble("yellow", 0));
+                            player.setKartkiCzerwone(cards.optDouble("red", 0));
+                            JSONObject tackles = statistics.getJSONObject("tackles");
+                            player.setProbyPrzechwytu(tackles.optDouble("total", 0));
+                            player.setPrzechwytyUdane(tackles.optDouble("interceptions", 0));
                         }
-                        statystykiZawodnikaRepository.save(player);
+                    statystykiZawodnikaRepository.save(player);
                     }
                 }
             }
         }
+        return all.toString();
     }
 
     public void getAvgOfAllPlayers(Iterable<StatystykiZawodnika> players, boolean isPositions) {

@@ -36,10 +36,10 @@ public class TeamStatsService {
         this.avgAllRepository = avgAllRepository;
     }
 
-    public void updateTeamStats(int teamId, int year) throws IOException, InterruptedException, JSONException {
+    public void updateTeamStats(int teamId, int year, int leagueId) throws IOException, InterruptedException, JSONException {
         HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create("https://api-football-beta.p.rapidapi.com/teams/statistics?league=140&team=" + teamId +"&season=" + year))
-                .header("X-RapidAPI-Key", "d33e623437msha2a56a1ea6f5bfbp18d606jsndd5dc6ff099b")
+                .uri(URI.create("https://api-football-beta.p.rapidapi.com/teams/statistics?league=" + leagueId + "&team=" + teamId +"&season=" + year))
+                .header("X-RapidAPI-Key", "ffd6a2d4f7mshd804fef0d09cb33p131f2bjsnf34096b2c4ec")
                 .header("X-RapidAPI-Host", "api-football-beta.p.rapidapi.com")
                 .method("GET", HttpRequest.BodyPublishers.noBody())
                 .build();
@@ -146,7 +146,7 @@ public class TeamStatsService {
     }
 
     public void getSumSum() {
-        double[] weights = {2.0, 1.5, 1, -0.3};
+        double[] weights = {1.5, 0.2, 0.2, -0.1};
         Iterable<SredniaDruzyny> allTeams = sredniaDruzynyRepository.findAll();
         for (SredniaDruzyny team : allTeams) {
             Optional<SredniaZeWszystkiego> optional = avgAllRepository.findSredniaZeWszystkiegoByTeamIdAndSeasonAndCzyUwzglednionePozycje(team.getTeamId(), team.getSeason(), false);
@@ -161,7 +161,7 @@ public class TeamStatsService {
     }
 
     public void getSumSumWPos() {
-        double[] weights = {2.0, 1.5, 1, -0.3};
+        double[] weights = {1.5, 0.2, 0.2, -0.1};
         Iterable<SredniaDruzynyPozycjeUwzglednione> allTeams = srDruzynyPozycjeRepository.findAll();
         for (SredniaDruzynyPozycjeUwzglednione team : allTeams) {
             Optional<SredniaZeWszystkiego> optional = avgAllRepository.findSredniaZeWszystkiegoByTeamIdAndSeasonAndCzyUwzglednionePozycje(team.getTeamId(), team.getSeason(), true);
@@ -184,7 +184,10 @@ public class TeamStatsService {
         summaryWeight += (team.getObronaKotrolaPrzeciwnika() * weights[2]);
         summaryWeight += (team.getFizycznoscInterakcje() * weights[3]);
 
-        avgTeam.setRaiting(summaryWeight);
+        double sum = 0;
+        for (double x: weights) sum += x;
+
+        avgTeam.setRaiting(summaryWeight / sum);
         avgTeam.setTeamName(team.getTeamName());
         avgTeam.setTeamId(team.getTeamId());
         avgTeam.setSeason(team.getSeason());
@@ -202,7 +205,10 @@ public class TeamStatsService {
         summaryWeight += (team.getObronaKotrolaPrzeciwnika() * weights[2]);
         summaryWeight += (team.getFizycznoscInterakcje() * weights[3]);
 
-        avgTeam.setRaiting(summaryWeight);
+        double sum = 0;
+        for (double x: weights) sum += x;
+
+        avgTeam.setRaiting(summaryWeight / sum);
         avgTeam.setTeamName(team.getTeamName());
         avgTeam.setTeamId(team.getTeamId());
         avgTeam.setSeason(team.getSeason());

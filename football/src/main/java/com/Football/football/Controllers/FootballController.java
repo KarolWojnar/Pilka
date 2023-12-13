@@ -39,15 +39,15 @@ public class FootballController {
     @Autowired
     private FixturesService fixturesService;
 
-    @GetMapping("/getStatsForSeason/{teamId}&{year}")
-    public String giveTeam(@PathVariable int teamId, @PathVariable int year) throws IOException, InterruptedException, JSONException {
-        teamStatsService.updateTeamStats(teamId, year);
+    @GetMapping("/getStatsForSeason/{teamId}&{year}&{leagueId}")
+    public String giveTeam(@PathVariable int teamId, @PathVariable int year, @PathVariable int leagueId) throws IOException, InterruptedException, JSONException {
+        teamStatsService.updateTeamStats(teamId, year, leagueId);
         return "index";
     }
 
-    @GetMapping("/getPlayers/{id}&{year}")
-    public String give(@PathVariable int id, @PathVariable int year) throws IOException, InterruptedException, JSONException {
-        playerStatsService.updatePlayerStats(id, year);
+    @GetMapping("/getPlayers/{id}&{year}&{leagueId}")
+    public String give(@PathVariable int id, @PathVariable int year, @PathVariable int leagueId, Model model) throws IOException, InterruptedException, JSONException {
+        model.addAttribute("team", playerStatsService.updatePlayerStats(id, year, leagueId));
         return "index";
     }
 
