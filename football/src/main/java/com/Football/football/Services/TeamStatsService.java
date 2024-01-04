@@ -146,7 +146,7 @@ public class TeamStatsService {
     }
 
     public void getSumSum() {
-        double[] weights = {1.5, 0.2, 0.2, -0.1};
+        double[] weights = {1.0, 0.5, 0.3, -0.2};
         Iterable<SredniaDruzyny> allTeams = sredniaDruzynyRepository.findAll();
         for (SredniaDruzyny team : allTeams) {
             Optional<SredniaZeWszystkiego> optional = avgAllRepository.findSredniaZeWszystkiegoByTeamIdAndSeasonAndCzyUwzglednionePozycje(team.getTeamId(), team.getSeason(), false);
@@ -161,7 +161,7 @@ public class TeamStatsService {
     }
 
     public void getSumSumWPos() {
-        double[] weights = {1.5, 0.2, 0.2, -0.1};
+        double[] weights = {1.0, 0.5, 0.3, -0.2};
         Iterable<SredniaDruzynyPozycjeUwzglednione> allTeams = srDruzynyPozycjeRepository.findAll();
         for (SredniaDruzynyPozycjeUwzglednione team : allTeams) {
             Optional<SredniaZeWszystkiego> optional = avgAllRepository.findSredniaZeWszystkiegoByTeamIdAndSeasonAndCzyUwzglednionePozycje(team.getTeamId(), team.getSeason(), true);

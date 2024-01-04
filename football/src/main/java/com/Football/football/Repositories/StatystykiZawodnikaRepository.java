@@ -12,6 +12,7 @@ public interface StatystykiZawodnikaRepository extends CrudRepository<Statystyki
 
     Optional<StatystykiZawodnika> getStatystykiZawodnikaById(Long id);
     Optional<StatystykiZawodnika> getStatystykiZawodnikaByPlayerIdAndTeamIdAndSeason(int id, int teamId, int season);
+    Optional<StatystykiZawodnika> getStatystykiZawodnikaByPlayerIdAndSeason(int id, int season);
 
     Iterable<StatystykiZawodnika> getStatystykiZawodnikasByPozycja(String pos);
     List<StatystykiZawodnika> getStatystykiZawodnikaByImieContaining(String name);

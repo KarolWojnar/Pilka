@@ -40,7 +40,7 @@ public class ManipulateController {
         playerStatsService.getAvgOfAllPlayers(statystykiZawodnikaRepository.getStatystykiZawodnikasByPozycja("Attacker"), true);
         playerStatsService.getAvgOfAllPlayers(statystykiZawodnikaRepository.getStatystykiZawodnikasByPozycja("Midfielder"), true);
         playerStatsService.getAvgOfAllPlayers(statystykiZawodnikaRepository.getStatystykiZawodnikasByPozycja("Defender"), true);
-        playerStatsService.getAvgOfAllPlayers(statystykiZawodnikaRepository.getStatystykiZawodnikasByPozycja("Goalkeeper"), true);
+        playerStatsService.getAvgOfAllPlayers(statystykiZawodnikaRepository.getStatystykiZawodnikasByPozycja("Goalkeeper"), false);
         return "index";
     }
 

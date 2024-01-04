@@ -42,7 +42,7 @@ public class PlayerStatsService {
         for (int page = 1; page <= 3; page++) {
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create("https://api-football-beta.p.rapidapi.com/players?season=" + season + "&league=" + leagueId +"&team=" + teamId + "&page=" + page))
-                    .header("X-RapidAPI-Key", "ffd6a2d4f7mshd804fef0d09cb33p131f2bjsnf34096b2c4ec")
+                    .header("X-RapidAPI-Key", "d33e623437msha2a56a1ea6f5bfbp18d606jsndd5dc6ff099b")
                     .header("X-RapidAPI-Host", "api-football-beta.p.rapidapi.com")
                     .method("GET", HttpRequest.BodyPublishers.noBody())
                     .build();
@@ -58,12 +58,19 @@ public class PlayerStatsService {
                         JSONObject playerStats = statsArray.getJSONObject(i);
                         int isActive = playerStats.getJSONArray("statistics").getJSONObject(0).getJSONObject("games").optInt("minutes", 0);
                         if (isActive == 0) continue;
-                        System.out.println(playerStats.getJSONObject("player").getInt("id") + " " + season);
                         Optional<StatystykiZawodnika> optional = statystykiZawodnikaRepository.getStatystykiZawodnikaByPlayerIdAndTeamIdAndSeason(playerStats.getJSONObject("player").getInt("id"), teamId, season);
 
                         if (optional.isPresent()) {
                             StatystykiZawodnika toUpdate = optional.get();
                             statystykiZawodnikaRepository.delete(toUpdate);
+                        }
+                        Optional<StatystykiZawodnika> moreMinuteOptionalPlayer = statystykiZawodnikaRepository.getStatystykiZawodnikaByPlayerIdAndSeason(playerStats.getJSONObject("player").getInt("id"), season);
+                        if (moreMinuteOptionalPlayer.isPresent()) {
+                            StatystykiZawodnika playerX = moreMinuteOptionalPlayer.get();
+                            System.out.println(playerX.getMinuty());
+                            System.out.println(isActive);
+                            if (playerX.getMinuty() < (float) isActive) statystykiZawodnikaRepository.delete(playerX);
+                            else continue;
                         }
 
                         StatystykiZawodnika player = new StatystykiZawodnika();
@@ -134,64 +141,51 @@ public class PlayerStatsService {
     public void getAvgOfAllPlayers(Iterable<StatystykiZawodnika> players, boolean isPositions) {
         Iterable<StatystykiDruzyny> teams = teamStatsRepository.findAll();
 
-        double fixturesCount = calculateFixtureCount(teams);
-        double[] playerSum = calculatePlayerSum(players);
-        double teamSum = calculateTeamGoalsSum(teams);
+        double fixturesCount = 0.0;
+        for (StatystykiDruzyny team : teams) {
+            fixturesCount += team.getSumaSpotkan();
+        }
 
-        teamSum = calculateAverages(playerSum, teamSum, fixturesCount);
-        double[] weights = calcculateWeights(playerSum, teamSum);
-        calculateWeightAndSave(players, weights, isPositions);
-    }
-
-    private double calculateTeamGoalsSum(Iterable<StatystykiDruzyny> teams) {
+        double sumPasses = 0, sumKeyPasses = 0, sumDribbleWon = 0, sumShootsOnGoal = 0, sumFoulsCommited = 0,
+                sumRedCards = 0, sumYellowCards = 0, sumDuelsLoss = 0, sumFoulsDrawn = 0, sumInterpWon = 0, sumDuelsWon = 0;
+        for (StatystykiZawodnika player : players) {
+            sumPasses += player.getPodania();
+            sumKeyPasses += player.getPodaniaKluczowe();
+            sumDribbleWon += player.getDryblingiWygrane();
+            sumShootsOnGoal += player.getStrzalyCelne();
+            sumFoulsCommited += player.getFaulePopelnione();
+            sumRedCards += player.getKartkiCzerwone();
+            sumYellowCards += player.getKartkiZolte();
+            sumDuelsLoss += (player.getPojedynki() - player.getPojedynkiWygrane());
+            sumInterpWon += player.getPrzechwytyUdane();
+            sumFoulsDrawn += player.getFauleNaZawodniku();
+            sumDuelsWon += player.getPojedynkiWygrane();
+        }
         double goleAsystySuma = 0.0;
         for (StatystykiDruzyny team : teams) {
             goleAsystySuma += team.getGoleStrzeloneNaWyjezdzie();
             goleAsystySuma += team.getGoleStrzeloneWDomu();
         }
-        return goleAsystySuma;
+
+        sumPasses /= fixturesCount;
+        sumKeyPasses /= fixturesCount;
+        sumDribbleWon /= fixturesCount;
+        sumShootsOnGoal /= fixturesCount;
+        sumFoulsCommited /= fixturesCount;
+        sumRedCards /= fixturesCount;
+        sumYellowCards /= fixturesCount;
+        sumDuelsLoss /= fixturesCount;
+        sumInterpWon /= fixturesCount;
+        sumFoulsDrawn /= fixturesCount;
+        sumDuelsWon /= fixturesCount;
+        goleAsystySuma /= fixturesCount;
+
+        double[] weights = {90 / sumPasses, 90 / sumKeyPasses, 90 / sumDribbleWon, 90 / sumShootsOnGoal, 90 / sumFoulsCommited,
+                90 / sumRedCards, 90 / sumYellowCards, 90 / sumDuelsLoss, 90 / sumInterpWon, 90 / sumFoulsDrawn, 90 / sumDuelsWon, 90 / goleAsystySuma};
+
+        calculateWeightAndSave(players, weights, isPositions);
     }
 
-    private double[] calculatePlayerSum(Iterable<StatystykiZawodnika> players) {
-        double[] sums = new double[11];
-        for (StatystykiZawodnika player : players) {
-            sums[0] += (player.getPodania() * player.getDokladnoscPodan());
-            sums[1] += player.getPodaniaKluczowe();
-            sums[2] += player.getDryblingiWygrane();
-            sums[3] += player.getStrzalyCelne();
-            sums[4] += player.getFaulePopelnione();
-            sums[5] += player.getKartkiCzerwone();
-            sums[6] += player.getKartkiZolte();
-            sums[7] += (player.getPojedynki() - player.getPojedynkiWygrane());
-            sums[8] += player.getPrzechwytyUdane();
-            sums[9] += player.getFauleNaZawodniku();
-            sums[10] += player.getPojedynkiWygrane();
-        }
-        return sums;
-    }
-    private double calculateFixtureCount(Iterable<StatystykiDruzyny> teams) {
-        double fixturesCount = 0.0;
-        for (StatystykiDruzyny team : teams) {
-            fixturesCount += team.getSumaSpotkan();
-        }
-        return fixturesCount;
-    }
-
-    private double calculateAverages(double[] playerSums, double teamGoalsSums, double fixturesCount) {
-        for (int i = 0; i < 11; i++) {
-            playerSums[i] /= fixturesCount;
-        }
-        return teamGoalsSums /= fixturesCount;
-    }
-
-    private double[] calcculateWeights(double[] playersSum, double teamGoalsSum) {
-        double[] weights = new double[12];
-        for (int i = 0; i < 11; i++) {
-            weights[i] = 90 / playersSum[i];
-        }
-        weights[11] = 90 / teamGoalsSum;
-        return weights;
-    }
     private void calculateWeightAndSave(Iterable<StatystykiZawodnika> players, double[] weights, boolean isPos) {
         for (StatystykiZawodnika player : players) {
             if (!isPos) {
@@ -205,7 +199,7 @@ public class PlayerStatsService {
 
                 double minutes = player.getMinuty();
 
-                double accuracyPerMinute = ((player.getPodania() * (player.getDokladnoscPodan() / 100)) / minutes) * weights[0];
+                double accuracyPerMinute = (player.getPodania() / minutes) * weights[0];
                 double keysPerMinute = (player.getPodaniaKluczowe() / minutes) * weights[1];
                 double assistsPerMinute = (player.getAsysty() / minutes) * weights[11];
                 zawodnik.setPodaniaKreatywnosc(accuracyPerMinute + keysPerMinute + assistsPerMinute);
@@ -218,8 +212,10 @@ public class PlayerStatsService {
                 double foulsCommitedPerMinute = (player.getFaulePopelnione() / minutes) * weights[4];
                 double redCards = (player.getKartkiCzerwone() / minutes) * weights[5];
                 double yellowCards = (player.getKartkiZolte() / minutes) * weights[6];
-                double duelsLostPerMinute = ((player.getPojedynki() - player.getPojedynkiWygrane()) / minutes) * weights[7];
-                zawodnik.setFizycznoscInterakcje(foulsCommitedPerMinute + redCards + yellowCards + duelsLostPerMinute);
+                double duelsLost = player.getPojedynki() - player.getPojedynkiWygrane();
+                double duelsLostPerMinute = (duelsLost / minutes) * weights[7];
+                double duelsToReturn = foulsCommitedPerMinute + redCards + yellowCards + duelsLostPerMinute;
+                zawodnik.setFizycznoscInterakcje((duelsToReturn / 4) * 3);
 
                 double interceptionsWonPerMinute = (player.getPrzechwytyUdane() / minutes) * weights[8];
                 double foulsDrawnPerMinute = (player.getFauleNaZawodniku() / minutes) * weights[9];
@@ -257,7 +253,8 @@ public class PlayerStatsService {
                 double redCards = (player.getKartkiCzerwone() / minutes) * weights[5];
                 double yellowCards = (player.getKartkiZolte() / minutes) * weights[6];
                 double duelsLostPerMinute = ((player.getPojedynki() - player.getPojedynkiWygrane()) / minutes) * weights[7];
-                zawodnik.setFizycznoscInterakcje(foulsCommitedPerMinute + redCards + yellowCards + duelsLostPerMinute);
+                double duelsToReturn = foulsCommitedPerMinute + redCards + yellowCards + duelsLostPerMinute;
+                zawodnik.setFizycznoscInterakcje((duelsToReturn / 4) * 3);
 
                 double interceptionsWonPerMinute = (player.getPrzechwytyUdane() / minutes) * weights[8];
                 double foulsDrawnPerMinute = (player.getFauleNaZawodniku() / minutes) * weights[9];
