@@ -8,6 +8,7 @@ import com.Football.football.Tables.SredniaDruzyny;
 import com.Football.football.Tables.SredniaDruzynyPozycjeUwzglednione;
 import com.Football.football.Tables.SredniaZeWszystkiego;
 import com.Football.football.Tables.StatystykiDruzyny;
+import lombok.RequiredArgsConstructor;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,18 +24,12 @@ import java.util.List;
 import java.util.Optional;
 
 @Service
+@RequiredArgsConstructor
 public class TeamStatsService {
     private final TeamStatsRepository teamStatsRepository;
     private final SredniaDruzynyRepository sredniaDruzynyRepository;
     private final SrDruzynyPozycjeRepository srDruzynyPozycjeRepository;
     private final AvgAllRepository avgAllRepository;
-    @Autowired
-    public TeamStatsService(TeamStatsRepository teamStatsRepository, SredniaDruzynyRepository sredniaDruzynyRepository, SrDruzynyPozycjeRepository srDruzynyPozycjeRepository, AvgAllRepository avgAllRepository) {
-        this.teamStatsRepository = teamStatsRepository;
-        this.sredniaDruzynyRepository = sredniaDruzynyRepository;
-        this.srDruzynyPozycjeRepository = srDruzynyPozycjeRepository;
-        this.avgAllRepository = avgAllRepository;
-    }
 
     public void updateTeamStats(int teamId, int year, int leagueId) throws IOException, InterruptedException, JSONException {
         HttpRequest request = HttpRequest.newBuilder()
