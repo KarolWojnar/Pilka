@@ -14,6 +14,17 @@ public class SredniaZeWszystkiego {
         return season;
     }
 
+    public int getLeagueId() {
+        return leagueId;
+    }
+
+    public void setLeagueId(int leagueId) {
+        this.leagueId = leagueId;
+    }
+
+    @Column(name = "id ligi")
+    private int leagueId;
+
     public void setSeason(Long season) {
         this.season = season;
     }

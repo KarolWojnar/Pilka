@@ -1,18 +1,14 @@
 package com.Football.football.Services;
 
-import com.Football.football.Repositories.AvgAllRepository;
-import com.Football.football.Repositories.SrDruzynyPozycjeRepository;
-import com.Football.football.Repositories.SredniaDruzynyRepository;
-import com.Football.football.Repositories.TeamStatsRepository;
-import com.Football.football.Tables.SredniaDruzyny;
-import com.Football.football.Tables.SredniaDruzynyPozycjeUwzglednione;
-import com.Football.football.Tables.SredniaZeWszystkiego;
-import com.Football.football.Tables.StatystykiDruzyny;
+import com.Football.football.Repositories.*;
+import com.Football.football.Tables.*;
 import lombok.RequiredArgsConstructor;
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.ui.Model;
 
 import java.io.IOException;
 import java.net.URI;
@@ -30,6 +26,44 @@ public class TeamStatsService {
     private final SredniaDruzynyRepository sredniaDruzynyRepository;
     private final SrDruzynyPozycjeRepository srDruzynyPozycjeRepository;
     private final AvgAllRepository avgAllRepository;
+    private final RealnePozycjeRepository realnePozycjeRepository;
+
+    public void getRealStandings(int season, int leagueId) throws IOException, InterruptedException, JSONException {
+
+        if ((realnePozycjeRepository.findFirstByLeagueIdAndYear(leagueId, season)).isPresent()) return;
+
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("https://api-football-beta.p.rapidapi.com/standings?season=" + season + "&league=" + leagueId))
+                .header("X-RapidAPI-Key", "d33e623437msha2a56a1ea6f5bfbp18d606jsndd5dc6ff099b")
+                .header("X-RapidAPI-Host", "api-football-beta.p.rapidapi.com")
+                .method("GET", HttpRequest.BodyPublishers.noBody())
+                .build();
+        HttpResponse<String> response = HttpClient.newHttpClient().send(request, HttpResponse.BodyHandlers.ofString());
+        String responseString = response.body();
+        JSONObject jsonResponse = new JSONObject(responseString);
+
+        if (jsonResponse.has("response")) {
+
+            JSONArray standingsArray = jsonResponse.getJSONArray("response")
+                    .getJSONObject(0)
+                    .getJSONObject("league")
+                    .getJSONArray("standings")
+                    .getJSONArray(0);
+
+            for (int i = 0; i < standingsArray.length(); i++) {
+                RealnePozycjeTabela table = new RealnePozycjeTabela();
+                JSONObject teamStandings = standingsArray.getJSONObject(i);
+                table.setPozycja(teamStandings.getInt("rank"));
+                table.setPoints(teamStandings.getInt("points"));
+                table.setLeagueId(leagueId);
+                table.setTeamId(teamStandings.getJSONObject("team").getInt("id"));
+                table.setTeamName(teamStandings.getJSONObject("team").getString("name"));
+                table.setYear(season);
+                realnePozycjeRepository.save(table);
+            }
+        }
+
+    }
 
     public void updateTeamStats(int teamId, int year, int leagueId) throws IOException, InterruptedException, JSONException {
         HttpRequest request = HttpRequest.newBuilder()
@@ -169,7 +203,7 @@ public class TeamStatsService {
             avgAllRepository.save(avgTeam);
         }
     }
-    private static SredniaZeWszystkiego getSredniaZeWszystkiegoPos(SredniaDruzynyPozycjeUwzglednione team, double[] weights, boolean isPos) {
+    private SredniaZeWszystkiego getSredniaZeWszystkiegoPos(SredniaDruzynyPozycjeUwzglednione team, double[] weights, boolean isPos) {
         double summaryWeight = 0.0;
 
         SredniaZeWszystkiego avgTeam = new SredniaZeWszystkiego();
@@ -186,14 +220,16 @@ public class TeamStatsService {
         avgTeam.setTeamName(team.getTeamName());
         avgTeam.setTeamId(team.getTeamId());
         avgTeam.setSeason(team.getSeason());
+        avgTeam.setLeagueId(realnePozycjeRepository.findFirstByTeamId(team.getTeamId()).get().getLeagueId());
         avgTeam.setCzyUwzglednionePozycje(isPos);
         return avgTeam;
     }
 
-    private static SredniaZeWszystkiego getSredniaZeWszystkiego(SredniaDruzyny team, double[] weights, boolean isPos) {
+    private SredniaZeWszystkiego getSredniaZeWszystkiego(SredniaDruzyny team, double[] weights, boolean isPos) {
         double summaryWeight = 0.0;
 
         SredniaZeWszystkiego avgTeam = new SredniaZeWszystkiego();
+
 
         summaryWeight += (team.getDryblingSkutecznosc() * weights[0]);
         summaryWeight += (team.getPodaniaKreatywnosc() * weights[1]);
@@ -203,11 +239,13 @@ public class TeamStatsService {
         double sum = 0;
         for (double x: weights) sum += x;
 
+
         avgTeam.setRaiting(summaryWeight / sum);
         avgTeam.setTeamName(team.getTeamName());
         avgTeam.setTeamId(team.getTeamId());
         avgTeam.setSeason(team.getSeason());
         avgTeam.setCzyUwzglednionePozycje(isPos);
+        avgTeam.setLeagueId(realnePozycjeRepository.findFirstByTeamId(team.getTeamId()).get().getLeagueId());
         return avgTeam;
     }
 

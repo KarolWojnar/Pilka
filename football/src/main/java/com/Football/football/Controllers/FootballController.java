@@ -1,6 +1,7 @@
 package com.Football.football.Controllers;
 
 import com.Football.football.Repositories.FixturesRepository;
+import com.Football.football.Repositories.RealnePozycjeRepository;
 import com.Football.football.Repositories.StatystykiZawodnikaRepository;
 import com.Football.football.Repositories.TeamStatsRepository;
 import com.Football.football.Services.FixturesService;
@@ -9,6 +10,7 @@ import com.Football.football.Services.TeamStatsService;
 import com.Football.football.Tables.StatystykiDruzyny;
 import com.Football.football.Tables.StatystykiSpotkan;
 import com.Football.football.Tables.StatystykiZawodnika;
+import lombok.RequiredArgsConstructor;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -25,19 +27,14 @@ import java.net.http.HttpResponse;
 import java.util.Optional;
 
 @Controller
+@RequiredArgsConstructor
 public class FootballController {
 
-    @Autowired
-    FixturesRepository fixturesRepository;
+    private final TeamStatsService teamStatsService;
 
-    @Autowired
-    private TeamStatsService teamStatsService;
+    private final PlayerStatsService playerStatsService;
 
-    @Autowired
-    private PlayerStatsService playerStatsService;
-
-    @Autowired
-    private FixturesService fixturesService;
+    private final FixturesService fixturesService;
 
     @GetMapping("/getStatsForSeason/{teamId}&{year}&{leagueId}")
     public String giveTeam(@PathVariable int teamId, @PathVariable int year, @PathVariable int leagueId) throws IOException, InterruptedException, JSONException {
@@ -55,6 +52,12 @@ public class FootballController {
     @GetMapping("/fixture/{id}")
     public String getFixtures(@PathVariable int teamId) throws IOException, InterruptedException, JSONException {
         fixturesService.getFixtures(teamId);
+        return "index";
+    }
+
+    @GetMapping("/getSeasonStandings/{season}&{leagueId}")
+    public String getStandings(@PathVariable int season, @PathVariable int leagueId) throws IOException, InterruptedException, JSONException {
+        teamStatsService.getRealStandings(season, leagueId);
         return "index";
     }
 

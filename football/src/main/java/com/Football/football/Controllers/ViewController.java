@@ -24,6 +24,8 @@ public class ViewController {
     private TeamStatsService teamStatsService;
     @Autowired
     private AvgAllRepository avgAllRepository;
+    @Autowired
+    private RealnePozycjeRepository realnePozycjeRepository;
 
     @GetMapping("/player/{id}&{year}")
     public String getProfilPlayer(@PathVariable Long id, @PathVariable Long year, Model model) {
@@ -117,4 +119,16 @@ public class ViewController {
         compareRaiting(model, idA, idB);
         return "teamView2";
     }
+    @GetMapping("/standingsLeague/{year}&{leagueId}")
+    public String showStandings(@PathVariable int year, @PathVariable int leagueId, Model model) {
+        Iterable<SredniaZeWszystkiego> teamsNoPos = avgAllRepository.getSredniaZeWszystkiegoByLeagueIdAndSeasonAndCzyUwzglednionePozycjeOrderByRaitingDesc(leagueId, year, false);
+        Iterable<SredniaZeWszystkiego> teamsPos = avgAllRepository.getSredniaZeWszystkiegoByLeagueIdAndSeasonAndCzyUwzglednionePozycjeOrderByRaitingDesc(leagueId, year, true);
+        Iterable<RealnePozycjeTabela> teamsReal = realnePozycjeRepository.getRealnePozycjeTabelaByLeagueIdAndYearOrderByPozycja(leagueId, year);
+        model.addAttribute("teamsNoPos", teamsNoPos);
+        model.addAttribute("teamsPos", teamsPos);
+        model.addAttribute("teamsReal", teamsReal);
+        return "standingsLeague";
+    }
+
+
 }
