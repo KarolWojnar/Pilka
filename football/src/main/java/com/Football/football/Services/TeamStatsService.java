@@ -6,9 +6,7 @@ import lombok.RequiredArgsConstructor;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.ui.Model;
 
 import java.io.IOException;
 import java.net.URI;
@@ -256,5 +254,8 @@ public class TeamStatsService {
         for (SredniaZeWszystkiego team : c) raitings.add(team.getRaiting());
         for (SredniaZeWszystkiego team : d) raitings.add(team.getRaiting());
         return raitings;
+    }
+    public Iterable<StatystykiDruzyny> findAllTeams() {
+        return teamStatsRepository.findAll();
     }
 }
