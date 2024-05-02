@@ -11,9 +11,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.stereotype.Service;
 
-import java.io.BufferedWriter;
-import java.io.FileWriter;
-import java.io.IOException;
+import java.io.*;
+import java.nio.charset.StandardCharsets;
+
+import static java.nio.charset.StandardCharsets.*;
 
 @Service
 @RequiredArgsConstructor
@@ -25,29 +26,67 @@ public class StoreDataInCypher {
     private final PlayerStatsService playerStatsService;
 
     public void saveDatas() throws IOException {
-        String text = getFootballData().toString();
+        String textPlayers2CSV = getFootballPlayersDataCSV().toString();
+        String textTeams2CSV = getFootballTeamsDataCSV().toString();
 
+        String pathPlayerCSV = "C:\\Users\\dpk\\Desktop\\pilka.csv";
+        String pathTeamCSV = "C:\\Users\\dpk\\Desktop\\druzyna.csv";
 
-        String path = "C:\\Users\\karol\\Desktop\\cypherCommand.txt";
+        BufferedWriter bufferedWriter = new BufferedWriter(
+                new OutputStreamWriter(new FileOutputStream(pathPlayerCSV), StandardCharsets.UTF_8));
 
-        FileWriter fileWriter = new FileWriter(path);
+        bufferedWriter.write(textPlayers2CSV);
 
-        BufferedWriter bufferedWriter = new BufferedWriter(fileWriter);
+        bufferedWriter = new BufferedWriter(
+                new OutputStreamWriter(new FileOutputStream(pathTeamCSV), StandardCharsets.UTF_8));
 
-        bufferedWriter.write(text);
+        bufferedWriter.write(textTeams2CSV);
 
         bufferedWriter.close();
 
-        fileWriter.close();
-
     }
 
-    private StringBuilder getFootballData() {
+    private StringBuilder getFootballPlayersDataCSV() {
         StringBuilder query = new StringBuilder("");
+        query.append("id_zawodnika; imie; nazwisko; id_druzyny; sezon_rozgrywek; wiek; wzrost; waga; kraj;" +
+                "wystepy; minuty; pozycja; rating; strzaly; strzaly_celne; gole;" +
+                "podania; dokladnosc_podan; podania_kluczowe; asysty; pojedynki; pojedynki_wygrane;" +
+                "proby_przechwytu; przechwyty_udane, dryblingi; dryblingi_wygrane; faule_na_zawodniku;" +
+                "faule_popelnione; kartki_zolte; kartki_czerwone; czy_kontuzjowany\n");
         Iterable<StatystykiZawodnika> statystykiZawodnikow = playerStatsService.findAllPlayers();
+        // Dodanie danych zawodników
+        for (StatystykiZawodnika zawodnik : statystykiZawodnikow) {
+            query.append(zawodnik.getPlayerId()).append("; ")
+                    .append(zawodnik.getImie()).append("; ").append(zawodnik.getNazwisko()).append("; ")
+                    .append(zawodnik.getTeamId()).append("; ").append(zawodnik.getSeason()).append("; ")
+                    .append(zawodnik.getWiek()).append("; ").append(zawodnik.getWzrost()).append("; ")
+                    .append(zawodnik.getWaga()).append("; ").append(zawodnik.getKraj()).append("; ")
+                    .append(zawodnik.getWystepy()).append("; ").append(zawodnik.getMinuty()).append("; ")
+                    .append(zawodnik.getPozycja()).append("; ").append(zawodnik.getRating()).append("; ")
+                    .append(zawodnik.getStrzaly()).append("; ").append(zawodnik.getStrzalyCelne()).append("; ")
+                    .append(zawodnik.getGole()).append("; ").append(zawodnik.getPodania()).append("; ")
+                    .append(zawodnik.getDokladnoscPodan()).append("; ").append(zawodnik.getPodaniaKluczowe()).append("; ")
+                    .append(zawodnik.getAsysty()).append("; ").append(zawodnik.getPojedynki()).append("; ")
+                    .append(zawodnik.getPojedynkiWygrane()).append("; ").append(zawodnik.getProbyPrzechwytu()).append("; ")
+                    .append(zawodnik.getPrzechwytyUdane()).append("; ").append(zawodnik.getDryblingi()).append("; ")
+                    .append(zawodnik.getDryblingiWygrane()).append("; ").append(zawodnik.getFauleNaZawodniku()).append("; ")
+                    .append(zawodnik.getFaulePopelnione()).append("; ").append(zawodnik.getKartkiZolte()).append("; ")
+                    .append(zawodnik.getKartkiCzerwone()).append("; ").append(zawodnik.isCzyKontuzjowany())
+                    .append("\n");
+        }
+        return query;
+    }
+
+    private StringBuilder getFootballTeamsDataCSV() {
+        StringBuilder query = new StringBuilder("");
+        query.append("id; nazwa; sezon_rozgrywek; gole_strzelone_w_domu; gole_strzelone_na_wyjezdzie; gole_stracone_w_domu; " +
+                "gole_stracone_na_wyjezdzie; zolte_kartki; czerwone_kartki; mecze_domowe; mecze_na_wyjezdzie; " +
+                "srednia_goli_straconych_w_domu; srednia_goli_strzelonych_w_domu; srednia_goli_straconych_na_wyjezdzie; " +
+                "srednia_goli_strzelonych_na_wyjezdzie; wygrane_w_domu; wygrane_na_wyjezdzie; przegrane_w_domu; " +
+                "przegrane_na_wyjezdzie; remisy_w_domu; remisy_na_wyjezdzie\n");
+
         Iterable<StatystykiDruzyny> statystykiDruzyn = teamStatsService.findAllTeams();
 
-        // Dodanie danych drużyn
         for (StatystykiDruzyny team : statystykiDruzyn) {
             double yellow = team.getKartkiZolteWMinucie0_15() + team.getKartkiZolteWMinucie16_30()
                     + team.getKartkiZolteWMinucie31_45() + team.getKartkiZolteWMinucie46_60()
@@ -58,70 +97,27 @@ public class StoreDataInCypher {
                     + team.getKartkiCzerwoneWMinucie61_75() + team.getKartkiCzerwoneWMinucie76_90()
                     + team.getKartkiCzerwoneWMinucie91_105();
 
-            query.append("CREATE (t:Druzyna {")
-                    .append("id: ").append(team.getTeamId()).append(", ")
-                    .append("nazwa: '").append(team.getTeamName()).append("', ")
-                    .append("sezon_rozgryweg: '").append(team.getSeason()).append("', ")
-                    .append("gole_strzelone_w_domu: ").append(team.getGoleStrzeloneWDomu()).append(", ")
-                    .append("gole_strzelone_na_wyjezdzie: ").append(team.getGoleStrzeloneNaWyjezdzie()).append(", ")
-                    .append("gole_stracone_w_domu: ").append(team.getGoleStrzeloneWDomu()).append(", ")
-                    .append("gole_stracone_na_wyjezdzie: ").append(team.getGoleStraconeNaWyjezdzie()).append(", ")
-                    .append("żółte_kartki: ").append(yellow).append(", ")
-                    .append("czerwone_kartki: ").append(red).append(", ")
-                    .append("mecze_domowe: ").append(team.getMeczeDomowe()).append(", ")
-                    .append("mecze_na_wyjezdzie: ").append(team.getMeczeWyjazdowe()).append(", ")
-                    .append("srednia_goli_straconych_w_domu: ").append(team.getSredniaGoliStraconychWDomu()).append(", ")
-                    .append("srednia_goli_strzelonych_w_domu: ").append(team.getGoleStrzeloneWDomu()).append(", ")
-                    .append("srednia_goli_straconych_na_wyjezdzie: ").append(team.getSredniaGoliStraconychNaWyjezdzie()).append(", ")
-                    .append("srednia_goli_strzelonych_na_wyjezdzie: ").append(team.getSredniaGoliStrzelonychNaWyjezdzie()).append(", ")
-                    .append("wygrane_w_domu: ").append(team.getWygraneWDomu()).append(", ")
-                    .append("wygrane_na_wyjezdzie: ").append(team.getWygraneNaWyjezdzie()).append(", ")
-                    .append("przegrane_w_domu: ").append(team.getPrzegraneWDomu()).append(", ")
-                    .append("przegrane_na_wyjezdzie: ").append(team.getPrzegraneNaWyjezdzie()).append(", ")
-                    .append("remisy_w_domu: ").append(team.getRemisyWDomu()).append(", ")
-                    .append("remisy_na_wyjezdzie: ").append(team.getRemisyNaWyjezdzie())
-                    .append("})\n");
-        }
-
-        // Dodanie danych zawodników
-        for (StatystykiZawodnika zawodnik : statystykiZawodnikow) {
-            query.append("CREATE (p:Zawodnik {")
-                    .append("id: ").append(zawodnik.getPlayerId()).append(", ")
-                    .append("imie: '").append(zawodnik.getImie()).append("', ")
-                    .append("nazwisko: '").append(zawodnik.getNazwisko()).append("', ")
-                    .append("id_druzyny: ").append(zawodnik.getTeamId()).append(", ")
-                    .append("sezon_rozgrywek: '").append(zawodnik.getSeason()).append("', ")
-                    .append("wiek: ").append(zawodnik.getWiek()).append(", ")
-                    .append("wzrost: ").append(zawodnik.getWzrost()).append(", ")
-                    .append("waga: ").append(zawodnik.getWaga()).append(", ")
-                    .append("kraj: '").append(zawodnik.getKraj()).append("', ")
-                    .append("wystepy: ").append(zawodnik.getWystepy()).append(", ")
-                    .append("minuty: ").append(zawodnik.getMinuty()).append(", ")
-                    .append("pozycja: '").append(zawodnik.getPozycja()).append("', ")
-                    .append("rating: ").append(zawodnik.getRating()).append(", ")
-                    .append("strzaly: ").append(zawodnik.getStrzaly()).append(", ")
-                    .append("strzaly_celne: ").append(zawodnik.getStrzalyCelne()).append(", ")
-                    .append("gole: ").append(zawodnik.getGole()).append(", ")
-                    .append("podania: ").append(zawodnik.getPodania()).append(", ")
-                    .append("dokladnosc_podan: ").append(zawodnik.getDokladnoscPodan()).append(", ")
-                    .append("podania_kluczowe: ").append(zawodnik.getPodaniaKluczowe()).append(", ")
-                    .append("asysty: ").append(zawodnik.getAsysty()).append(", ")
-                    .append("pojedynki: ").append(zawodnik.getPojedynki()).append(", ")
-                    .append("pojedynki_wygrane: ").append(zawodnik.getPojedynkiWygrane()).append(", ")
-                    .append("proby_przechwytu: ").append(zawodnik.getProbyPrzechwytu()).append(", ")
-                    .append("przechwyty_udane: ").append(zawodnik.getPrzechwytyUdane()).append(", ")
-                    .append("dryblingi: ").append(zawodnik.getDryblingi()).append(", ")
-                    .append("dryblingi_wygrane: ").append(zawodnik.getDryblingiWygrane()).append(", ")
-                    .append("faule_na_zawodniku: ").append(zawodnik.getFauleNaZawodniku()).append(", ")
-                    .append("faule_popelnione: ").append(zawodnik.getFaulePopelnione()).append(", ")
-                    .append("kartki_zolte: ").append(zawodnik.getKartkiZolte()).append(", ")
-                    .append("kartki_czerwone: ").append(zawodnik.getKartkiCzerwone()).append(", ")
-                    .append("czy_kontuzjowany: ").append(zawodnik.isCzyKontuzjowany())
-                    .append("})\n");
-
-            query.append("MATCH (z:Zawodnik{id: ").append(zawodnik.getPlayerId()).append("}), ")
-                    .append("(t:Druzyna{id: ").append(zawodnik.getTeamId()).append("}) ")
-                    .append("CREATE (z)-[:GRA_DLA]->(t)\n");
+            query.append(team.getTeamId()).append("; ")
+                    .append(team.getTeamName()).append("; ")
+                    .append(team.getSeason()).append("; ")
+                    .append(team.getGoleStrzeloneWDomu()).append("; ")
+                    .append(team.getGoleStrzeloneNaWyjezdzie()).append("; ")
+                    .append(team.getGoleStrzeloneWDomu()).append("; ")
+                    .append(team.getGoleStraconeNaWyjezdzie()).append("; ")
+                    .append(yellow).append("; ").append(red).append("; ")
+                    .append(team.getMeczeDomowe()).append("; ")
+                    .append(team.getMeczeWyjazdowe()).append("; ")
+                    .append(team.getSredniaGoliStraconychWDomu()).append("; ")
+                    .append(team.getGoleStrzeloneWDomu()).append("; ")
+                    .append(team.getSredniaGoliStraconychNaWyjezdzie()).append("; ")
+                    .append(team.getSredniaGoliStrzelonychNaWyjezdzie()).append("; ")
+                    .append(team.getWygraneWDomu()).append("; ")
+                    .append(team.getWygraneNaWyjezdzie()).append("; ")
+                    .append(team.getPrzegraneWDomu()).append("; ")
+                    .append(team.getPrzegraneNaWyjezdzie()).append("; ")
+                    .append(team.getRemisyWDomu()).append("; ")
+                    .append(team.getRemisyNaWyjezdzie())
+                    .append("\n");
         }
 
         return query;
