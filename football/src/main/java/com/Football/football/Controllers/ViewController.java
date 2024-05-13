@@ -125,5 +125,12 @@ public class ViewController {
         return "standingsLeague";
     }
 
+    @GetMapping("/admin/allInOne")
+    public String showAdminAll(Model model) {
+        Iterable<SredniaDruzyny> allTeams = sredniaDruzynyRepository.findAll();
+        model.addAttribute("teams", allTeams);
+        return "index";
+    }
+
 
 }
