@@ -13,26 +13,37 @@
     </script>
     <title>Admin Panel</title>
 </head>
-<body>
+<body class="bg-gray-500">
 <h1>WELCOME TO ADMIN PANEL</h1>
-<div class="text-gray-600">
-    <table class="table-auto">
-        <thead>
-        <tr>
-            <th>ID</th>
-            <th>Nazwa druzyny</th>
-            <th>Sezon rozgrywek</th>
-            <th>Liga</th>
-        </tr>
-        </thead>
-        <tbody>
-        <tr th:each="team : ${teams}">
-            <td th:text="${team.teamId}"></td>
-            <td th:text="${team.teamName}"></td>
-            <td th:text="${team.leagueId}"></td>
-        </tr>
-        </tbody>
-    </table>
+<div class="grid grid-cols-3 gap-4">
+    <div class="col-span-2 bg-blue-200">
+        <table class="table-auto w-full">
+            <thead>
+            <tr>
+                <th class="w-1/6">ID</th>
+                <th class="w-2/6">Nazwa druzyny</th>
+                <th class="w-1/6">Sezon rozgrywek</th>
+                <th class="w-2/6">Liga</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr class="text-xl text-center hover:bg-blue-300" th:each="team : ${teams}">
+                <td th:text="${team.teamId}"></td>
+                <td>
+                    <a class="font-bold text-emerald-700" th:href="@{/teams/{id}/{year}(id=${team.teamId}, year=${team.season})}" th:text="${team.teamName}"></a>
+                </td>
+                <td th:text="${team.season}"></td>
+                <td>
+                    <span th:each="league : ${leagues}">
+                        <span th:if="${league.leagueId == team.leagueId}" th:text="${league.leagueName}"></span>
+                    </span>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+    <div class="col-span-1 bg-green-100">
+    </div>
 </div>
 </body>
 </html>

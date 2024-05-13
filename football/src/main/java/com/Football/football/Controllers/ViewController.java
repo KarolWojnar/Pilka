@@ -4,7 +4,6 @@ import com.Football.football.Repositories.*;
 import com.Football.football.Services.TeamStatsService;
 import com.Football.football.Tables.*;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
@@ -20,6 +19,7 @@ public class ViewController {
     private final TeamStatsRepository teamStatsRepository;
     private final TeamStatsService teamStatsService;
     private final AvgAllRepository avgAllRepository;
+    private final LeaguesRepository leaguesRepository;
     private final RealnePozycjeRepository realnePozycjeRepository;
 
     @GetMapping("/player/{id}&{year}")
@@ -32,11 +32,47 @@ public class ViewController {
             if (avgPlayer.isPresent()) {
                 SredniaDruzyny avgTeam = avgPlayer.get();
                 model.addAttribute("player", player);
+                model.addAttribute("name", player.getImie());
                 model.addAttribute("player0", avgTeam);
             }
             else model.addAttribute("noPlayer", "Nie ma takiego zawodnika");
         }
         else model.addAttribute("noPlayer", "Nie ma takiego zawodnika");
+        return "playerView2";
+    }
+
+    private SredniaDruzynyPozycjeUwzglednione avgStats(Iterable<SredniaDruzynyPozycjeUwzglednione> avgTeams) {
+        double dis = 0.0, pis = 0.0, fii = 0.0, okp = 0.0, summ = 0.0;
+        for(SredniaDruzynyPozycjeUwzglednione team: avgTeams) {
+            summ++;
+            dis += team.getDryblingSkutecznosc();
+            pis += team.getPodaniaKreatywnosc();
+            fii += team.getFizycznoscInterakcje();
+            okp += team.getObronaKotrolaPrzeciwnika();
+        }
+        SredniaDruzynyPozycjeUwzglednione avgTeam = new SredniaDruzynyPozycjeUwzglednione();
+        avgTeam.setTeamName("Średnia");
+        avgTeam.setSeason(avgTeams.iterator().next().getSeason());
+        avgTeam.setDryblingSkutecznosc(dis / summ);
+        avgTeam.setPodaniaKreatywnosc(pis / summ);
+        avgTeam.setFizycznoscInterakcje(fii / summ);
+        avgTeam.setObronaKotrolaPrzeciwnika(okp / summ);
+        return avgTeam;
+    }
+
+    @GetMapping("/teams/{id}/{year}")
+    public String getTeam(@PathVariable Long id, @PathVariable Long year, Model model) {
+        Optional<SredniaDruzynyPozycjeUwzglednione> opTeam = srDruzynyPozycjeRepository.getSredniaDruzynyPozycjeUwzglednioneByTeamIdAndSeason(id, year);
+
+        if (opTeam.isPresent()) {
+            SredniaDruzynyPozycjeUwzglednione team = opTeam.get();
+            Iterable<SredniaDruzynyPozycjeUwzglednione> avgTeams = srDruzynyPozycjeRepository.getSredniaDruzynyPozycjeUwzglednionesBySeason(year);
+            SredniaDruzynyPozycjeUwzglednione avgTeam = avgStats(avgTeams);
+            model.addAttribute("player", team);
+            model.addAttribute("name", team.getTeamName());
+            model.addAttribute("player0", avgTeam);
+        }
+        else model.addAttribute("noPlayer", "Nie ma takiej drużyny");
         return "playerView2";
     }
 
@@ -128,7 +164,9 @@ public class ViewController {
     @GetMapping("/admin/allInOne")
     public String showAdminAll(Model model) {
         Iterable<SredniaDruzyny> allTeams = sredniaDruzynyRepository.findAll();
+        Iterable<League> leagues = leaguesRepository.findAll();
         model.addAttribute("teams", allTeams);
+        model.addAttribute("leagues", leagues);
         return "index";
     }
 

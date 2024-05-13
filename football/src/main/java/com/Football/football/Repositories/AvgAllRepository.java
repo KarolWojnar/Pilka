@@ -10,6 +10,7 @@ import java.util.Optional;
 public interface AvgAllRepository extends CrudRepository<SredniaZeWszystkiego, Long> {
     Optional<SredniaZeWszystkiego> findSredniaZeWszystkiegoByTeamIdAndSeasonAndCzyUwzglednionePozycje(Long id, Long year,boolean isPos);
     Iterable<SredniaZeWszystkiego> getSredniaZeWszystkiegoByTeamIdAndCzyUwzglednionePozycjeOrderBySeasonAsc(Long teamId, boolean isPozycja);
+    Iterable<SredniaZeWszystkiego> getSredniaZeWszystkiegoByCzyUwzglednionePozycjeAndSeason(boolean isPozycja, Long season);
     Iterable<SredniaZeWszystkiego> getSredniaZeWszystkiegoByLeagueIdAndSeasonAndCzyUwzglednionePozycjeOrderByRaitingDesc(int leagueId, int season, boolean withPositions);
 
 }
