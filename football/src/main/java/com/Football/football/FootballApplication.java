@@ -1,6 +1,5 @@
 package com.Football.football;
 
-import com.Football.football.Neo4j.StoreDataInCypher;
 import com.Football.football.Services.PlayerStatsService;
 import com.Football.football.Services.TeamStatsService;
 import lombok.RequiredArgsConstructor;
@@ -16,17 +15,6 @@ public class FootballApplication {
 
 	public static void main(String[] args) throws IOException {
 		SpringApplication.run(FootballApplication.class, args);
-	}
-
-	@Bean
-	public ApplicationRunner dataStoringRunner(StoreDataInCypher storeDataInCypher) {
-		return args -> {
-			try {
-				storeDataInCypher.saveDatas();
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
-		};
 	}
 
 }

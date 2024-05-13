@@ -85,6 +85,7 @@ public class TeamStatsService {
             teamStats.setTeamName(responseData.getJSONObject("team").getString("name"));
             teamStats.setTeamId((long) teamId);
             teamStats.setSeason((long) year);
+            teamStats.setLeagueId(leagueId);
             JSONObject fixtures = responseData.getJSONObject("fixtures");
             JSONObject played = fixtures.getJSONObject("played");
             teamStats.setSumaSpotkan(played.optDouble("total", 0));
@@ -146,7 +147,7 @@ public class TeamStatsService {
             teamStats.setKarneStrzelone(responseData.getJSONObject("penalty").getJSONObject("scored").optDouble("total", 0));
             teamStats.setKarneNiestrzelone(responseData.getJSONObject("penalty").getJSONObject("missed").optDouble("total", 0));
 
-            teamStats.setFormaca(responseData.getJSONArray("lineups").getJSONObject(0).optString("formation"));
+            teamStats.setFormacja(responseData.getJSONArray("lineups").getJSONObject(0).optString("formation"));
             teamStats.setIleRazyWtejFormacji(responseData.getJSONArray("lineups").getJSONObject(0).optDouble("played", 0));
 
             JSONObject cardsYellow = responseData.getJSONObject("cards").getJSONObject("yellow");
@@ -176,13 +177,13 @@ public class TeamStatsService {
         double[] weights = {1.0, 0.5, 0.3, -0.2};
         Iterable<SredniaDruzyny> allTeams = sredniaDruzynyRepository.findAll();
         for (SredniaDruzyny team : allTeams) {
-            Optional<SredniaZeWszystkiego> optional = avgAllRepository.findSredniaZeWszystkiegoByTeamIdAndSeasonAndCzyUwzglednionePozycje(team.getTeamId(), team.getSeason(), false);
+            Optional<SredniaZeWszystkiego> optional = avgAllRepository
+                    .findSredniaZeWszystkiegoByTeamIdAndSeasonAndCzyUwzglednionePozycje(team.getTeamId(), team.getSeason(), false);
             if (optional.isPresent()) {
                 SredniaZeWszystkiego updateTeam = optional.get();
                 avgAllRepository.delete(updateTeam);
             }
             SredniaZeWszystkiego avgTeam = getSredniaZeWszystkiego(team, weights, false);
-
             avgAllRepository.save(avgTeam);
         }
     }
@@ -191,7 +192,8 @@ public class TeamStatsService {
         double[] weights = {1.0, 0.5, 0.3, -0.2};
         Iterable<SredniaDruzynyPozycjeUwzglednione> allTeams = srDruzynyPozycjeRepository.findAll();
         for (SredniaDruzynyPozycjeUwzglednione team : allTeams) {
-            Optional<SredniaZeWszystkiego> optional = avgAllRepository.findSredniaZeWszystkiegoByTeamIdAndSeasonAndCzyUwzglednionePozycje(team.getTeamId(), team.getSeason(), true);
+            Optional<SredniaZeWszystkiego> optional = avgAllRepository
+                    .findSredniaZeWszystkiegoByTeamIdAndSeasonAndCzyUwzglednionePozycje(team.getTeamId(), team.getSeason(), true);
             if (optional.isPresent()) {
                 SredniaZeWszystkiego updateTeam = optional.get();
                 avgAllRepository.delete(updateTeam);
@@ -218,7 +220,7 @@ public class TeamStatsService {
         avgTeam.setTeamName(team.getTeamName());
         avgTeam.setTeamId(team.getTeamId());
         avgTeam.setSeason(team.getSeason());
-        avgTeam.setLeagueId(realnePozycjeRepository.findFirstByTeamId(team.getTeamId()).get().getLeagueId());
+        avgTeam.setLeagueId(team.getLeagueId());
         avgTeam.setCzyUwzglednionePozycje(isPos);
         return avgTeam;
     }
@@ -243,11 +245,12 @@ public class TeamStatsService {
         avgTeam.setTeamId(team.getTeamId());
         avgTeam.setSeason(team.getSeason());
         avgTeam.setCzyUwzglednionePozycje(isPos);
-        avgTeam.setLeagueId(realnePozycjeRepository.findFirstByTeamId(team.getTeamId()).get().getLeagueId());
+        avgTeam.setLeagueId(team.getLeagueId());
         return avgTeam;
     }
 
-    public List<Double> getAllRaitings(Iterable<SredniaZeWszystkiego> a, Iterable<SredniaZeWszystkiego> b, Iterable<SredniaZeWszystkiego> c, Iterable<SredniaZeWszystkiego> d) {
+    public List<Double> getAllRaitings(Iterable<SredniaZeWszystkiego> a, Iterable<SredniaZeWszystkiego> b,
+                                       Iterable<SredniaZeWszystkiego> c, Iterable<SredniaZeWszystkiego> d) {
         List<Double> raitings = new ArrayList<>();
         for (SredniaZeWszystkiego team : a) raitings.add(team.getRaiting());
         for (SredniaZeWszystkiego team : b) raitings.add(team.getRaiting());

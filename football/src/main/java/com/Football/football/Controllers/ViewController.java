@@ -3,6 +3,7 @@ package com.Football.football.Controllers;
 import com.Football.football.Repositories.*;
 import com.Football.football.Services.TeamStatsService;
 import com.Football.football.Tables.*;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -11,21 +12,15 @@ import org.springframework.web.bind.annotation.*;
 import java.util.*;
 
 @Controller
+@RequiredArgsConstructor
 public class ViewController {
-    @Autowired
-    private SredniaDruzynyRepository sredniaDruzynyRepository;
-    @Autowired
-    private SrDruzynyPozycjeRepository srDruzynyPozycjeRepository;
-    @Autowired
-    private PogrupowaneRepository pogrupowaneRepository;
-    @Autowired
-    private TeamStatsRepository teamStatsRepository;
-    @Autowired
-    private TeamStatsService teamStatsService;
-    @Autowired
-    private AvgAllRepository avgAllRepository;
-    @Autowired
-    private RealnePozycjeRepository realnePozycjeRepository;
+    private final SredniaDruzynyRepository sredniaDruzynyRepository;
+    private final SrDruzynyPozycjeRepository srDruzynyPozycjeRepository;
+    private final PogrupowaneRepository pogrupowaneRepository;
+    private final TeamStatsRepository teamStatsRepository;
+    private final TeamStatsService teamStatsService;
+    private final AvgAllRepository avgAllRepository;
+    private final RealnePozycjeRepository realnePozycjeRepository;
 
     @GetMapping("/player/{id}&{year}")
     public String getProfilPlayer(@PathVariable Long id, @PathVariable Long year, Model model) {

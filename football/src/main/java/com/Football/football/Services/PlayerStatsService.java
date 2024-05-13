@@ -190,7 +190,8 @@ public class PlayerStatsService {
     private void calculateWeightAndSave(Iterable<StatystykiZawodnika> players, double[] weights, boolean isPos) {
         for (StatystykiZawodnika player : players) {
             if (!isPos) {
-                Optional<PogrupowaneStatystykiZawodnikow> optionalPlayer = pogrupowaneRepository.getPogrupowaneStatystykiZawodnikowByPlayerIdAndSeason(player.getPlayerId(), player.getSeason());
+                Optional<PogrupowaneStatystykiZawodnikow> optionalPlayer = pogrupowaneRepository
+                        .getPogrupowaneStatystykiZawodnikowByPlayerIdAndSeason(player.getPlayerId(), player.getSeason());
                 PogrupowaneStatystykiZawodnikow zawodnik = new PogrupowaneStatystykiZawodnikow();
                 zawodnik.setImie(player.getImie() + " " + player.getNazwisko());
                 zawodnik.setPlayerId(player.getPlayerId());
@@ -241,7 +242,8 @@ public class PlayerStatsService {
     }
 
     private void setStatsAndSave(double[] weights, StatystykiZawodnika goalkeeper) {
-        Optional<PogrupowaneStatsZawodPozycjeUwzglednione> optionalPlayer = pogrupowanePozycjamiRepository.getPogrypowaneStatsZawodPozycjeUwzglednioneByPlayerIdAndSeason(goalkeeper.getPlayerId(), goalkeeper.getSeason());
+        Optional<PogrupowaneStatsZawodPozycjeUwzglednione> optionalPlayer = pogrupowanePozycjamiRepository
+                .getPogrypowaneStatsZawodPozycjeUwzglednioneByPlayerIdAndSeason(goalkeeper.getPlayerId(), goalkeeper.getSeason());
         PogrupowaneStatsZawodPozycjeUwzglednione zawodnik = new PogrupowaneStatsZawodPozycjeUwzglednione();
 
         zawodnik.setImie(goalkeeper.getImie() + " " + goalkeeper.getNazwisko());
@@ -313,6 +315,7 @@ public class PlayerStatsService {
             team.setSeason(season);
             Optional<StatystykiDruzyny> optionalName = teamStatsRepository.findFirstByTeamId(teamId);
             optionalName.ifPresent(statystykiDruzyny -> team.setTeamName(statystykiDruzyny.getTeamName()));
+            optionalName.ifPresent(statystykiDruzyny -> team.setLeagueId(statystykiDruzyny.getLeagueId()));
             team.setDryblingSkutecznosc(avgDryblingSkutecznosc);
             team.setFizycznoscInterakcje(avgFizycznoscInterakcje);
             team.setPodaniaKreatywnosc(avgPodaniaKreatywanosc);
@@ -328,8 +331,10 @@ public class PlayerStatsService {
             Long season = (Long) singleCombination[0];
             Long teamId = (Long) singleCombination[1];
 
-            List<PogrupowaneStatsZawodPozycjeUwzglednione> players = pogrupowanePozycjamiRepository.getPogrypowaneStatsZawodPozycjeUwzglednioneByTeamIdAndSeason(teamId, season);
-            Optional<SredniaDruzynyPozycjeUwzglednione> optionalSredniaDruzyny = srDruzynyPozycjeRepository.getSredniaDruzynyPozycjeUwzglednioneByTeamIdAndSeason(teamId, season);
+            List<PogrupowaneStatsZawodPozycjeUwzglednione> players = pogrupowanePozycjamiRepository
+                    .getPogrypowaneStatsZawodPozycjeUwzglednioneByTeamIdAndSeason(teamId, season);
+            Optional<SredniaDruzynyPozycjeUwzglednione> optionalSredniaDruzyny = srDruzynyPozycjeRepository
+                    .getSredniaDruzynyPozycjeUwzglednioneByTeamIdAndSeason(teamId, season);
             if (optionalSredniaDruzyny.isPresent()) {
                 SredniaDruzynyPozycjeUwzglednione prevTeam = optionalSredniaDruzyny.get();
                 srDruzynyPozycjeRepository.delete(prevTeam);
@@ -354,6 +359,7 @@ public class PlayerStatsService {
             team.setSeason(season);
             Optional<StatystykiDruzyny> optionalName = teamStatsRepository.findFirstByTeamId(teamId);
             optionalName.ifPresent(statystykiDruzyny -> team.setTeamName(statystykiDruzyny.getTeamName()));
+            optionalName.ifPresent(statystykiDruzyny -> team.setLeagueId(statystykiDruzyny.getLeagueId()));
             team.setDryblingSkutecznosc(avgDryblingSkutecznosc);
             team.setFizycznoscInterakcje(avgFizycznoscInterakcje);
             team.setPodaniaKreatywnosc(avgPodaniaKreatywanosc);

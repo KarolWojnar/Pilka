@@ -1,8 +1,12 @@
 package com.Football.football.Tables;
 
 import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.Setter;
 
 @Entity
+@Getter
+@Setter
 public class SredniaDruzyny {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -19,62 +23,8 @@ public class SredniaDruzyny {
     private Double obronaKotrolaPrzeciwnika;
     @Column(name = "podania i kreatywność")
     private Double podaniaKreatywnosc;
-    public String getTeamName() {
-        return teamName;
-    }
-
-    public void setTeamName(String teamName) {
-        this.teamName = teamName;
-    }
-
     @Column(name = "Nazwa drużyny")
     private String teamName;
-
-    public Double getDryblingSkutecznosc() {
-        return dryblingSkutecznosc;
-    }
-
-    public void setDryblingSkutecznosc(Double dryblingSkutecznosc) {
-        this.dryblingSkutecznosc = dryblingSkutecznosc;
-    }
-
-    public Double getFizycznoscInterakcje() {
-        return fizycznoscInterakcje;
-    }
-
-    public void setFizycznoscInterakcje(Double fizycznoscInterakcje) {
-        this.fizycznoscInterakcje = fizycznoscInterakcje;
-    }
-
-    public Long getSeason() {
-        return season;
-    }
-
-    public void setSeason(Long season) {
-        this.season = season;
-    }
-
-    public Double getObronaKotrolaPrzeciwnika() {
-        return obronaKotrolaPrzeciwnika;
-    }
-
-    public void setObronaKotrolaPrzeciwnika(Double obronaKotrolaPrzeciwnika) {
-        this.obronaKotrolaPrzeciwnika = obronaKotrolaPrzeciwnika;
-    }
-
-    public Double getPodaniaKreatywnosc() {
-        return podaniaKreatywnosc;
-    }
-
-    public void setPodaniaKreatywnosc(Double podaniaKreatywnosc) {
-        this.podaniaKreatywnosc = podaniaKreatywnosc;
-    }
-
-    public void setTeamId(Long teamId) {
-        this.teamId = teamId;
-    }
-
-    public Long getTeamId() {
-        return teamId;
-    }
+    @Column(name = "id_ligi")
+    private int leagueId;
 }

@@ -1,12 +1,18 @@
 package com.Football.football.Tables;
 
 import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.Setter;
 
 @Entity
+@Getter
+@Setter
 public class SredniaDruzynyPozycjeUwzglednione {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+    @Column(name = "id_ligi")
+    private int leagueId;
     @Column(name = "id drużyny")
     private Long teamId;
     @Column(name = "Drybling i Skuteczność")
@@ -19,63 +25,6 @@ public class SredniaDruzynyPozycjeUwzglednione {
     private Double obronaKotrolaPrzeciwnika;
     @Column(name = "podania i kreatywność")
     private Double podaniaKreatywnosc;
-
-    public Double getDryblingSkutecznosc() {
-        return dryblingSkutecznosc;
-    }
-
-    public void setDryblingSkutecznosc(Double dryblingSkutecznosc) {
-        this.dryblingSkutecznosc = dryblingSkutecznosc;
-    }
-
-    public Double getFizycznoscInterakcje() {
-        return fizycznoscInterakcje;
-    }
-
-    public void setFizycznoscInterakcje(Double fizycznoscInterakcje) {
-        this.fizycznoscInterakcje = fizycznoscInterakcje;
-    }
-
-    public Long getSeason() {
-        return season;
-    }
-
-    public void setSeason(Long season) {
-        this.season = season;
-    }
-
-    public Double getObronaKotrolaPrzeciwnika() {
-        return obronaKotrolaPrzeciwnika;
-    }
-
-    public void setObronaKotrolaPrzeciwnika(Double obronaKotrolaPrzeciwnika) {
-        this.obronaKotrolaPrzeciwnika = obronaKotrolaPrzeciwnika;
-    }
-
-    public String getTeamName() {
-        return teamName;
-    }
-
-    public void setTeamName(String teamName) {
-        this.teamName = teamName;
-    }
-
-    @Column(name = "Nazwa drużyny")
+    @Column(name = "nazwa drużyny")
     private String teamName;
-
-    public Double getPodaniaKreatywnosc() {
-        return podaniaKreatywnosc;
-    }
-
-    public void setPodaniaKreatywnosc(Double podaniaKreatywnosc) {
-        this.podaniaKreatywnosc = podaniaKreatywnosc;
-    }
-
-    public void setTeamId(Long teamId) {
-        this.teamId = teamId;
-    }
-
-    public Long getTeamId() {
-        return teamId;
-    }
 }
