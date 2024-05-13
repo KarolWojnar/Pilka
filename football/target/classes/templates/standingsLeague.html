@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+<div class="container">
+    <div class="row">
+        <div class="col-xs-12">
+            <div class="col-xs-4" th:if="${teamsNoPos}">
+                <div class="card">
+                    <div class="card-header"><b>Ranking bez uwzględnionych pozycji</b></div>
+                    <div class="card-body">
+                        <ol>
+                            <li th:each="team : ${teamsNoPos}" th:text="${team.teamName}"></li>
+                        </ol>
+                    </div>
+                </div>
+            </div>
+            <div class="col-xs-4" th:if="${teamsPos}">
+                <div class="card">
+                    <div class="card-header"><b>Ranking z uwzględnionymi pozycjami</b></div>
+                    <div class="card-body">
+                        <ol>
+                            <li th:each="team2 : ${teamsPos}" th:text="${team2.teamName}">asd</li>
+                        </ol>
+                    </div>
+                </div>
+            </div>
+            <div class="col-xs-4" th:if="${teamsReal}">
+                <div class="card">
+                    <div class="card-header"><b>Realny ranking drużyn</b></div>
+                    <div class="card-body">
+                        <ol>
+                            <li th:each="team3 : ${teamsReal}" th:text="${team3.teamName}"></li>
+                        </ol>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>
