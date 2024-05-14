@@ -16,13 +16,14 @@ public class ViewController {
     private final SredniaDruzynyRepository sredniaDruzynyRepository;
     private final SrDruzynyPozycjeRepository srDruzynyPozycjeRepository;
     private final PogrupowaneRepository pogrupowaneRepository;
+    private final PogrupowanePozycjamiRepository ppRepository;
     private final TeamStatsRepository teamStatsRepository;
     private final TeamStatsService teamStatsService;
     private final AvgAllRepository avgAllRepository;
     private final LeaguesRepository leaguesRepository;
     private final RealnePozycjeRepository realnePozycjeRepository;
 
-    @GetMapping("/player/{id}&{year}")
+    @GetMapping("/player/{id}/{year}")
     public String getProfilPlayer(@PathVariable Long id, @PathVariable Long year, Model model) {
         Optional<PogrupowaneStatystykiZawodnikow> optionalPlayer = pogrupowaneRepository.getPogrupowaneStatystykiZawodnikowByPlayerIdAndSeason(id, year);
 
@@ -35,7 +36,7 @@ public class ViewController {
                 model.addAttribute("name", player.getImie());
                 model.addAttribute("player0", avgTeam);
             }
-            else model.addAttribute("noPlayer", "Nie ma takiego zawodnika");
+            else model.addAttribute("noPlayer", "Nie ma takiej druzyny");
         }
         else model.addAttribute("noPlayer", "Nie ma takiego zawodnika");
         return "playerView2";
@@ -69,11 +70,18 @@ public class ViewController {
             Iterable<SredniaDruzynyPozycjeUwzglednione> avgTeams = srDruzynyPozycjeRepository.getSredniaDruzynyPozycjeUwzglednionesBySeason(year);
             SredniaDruzynyPozycjeUwzglednione avgTeam = avgStats(avgTeams);
             model.addAttribute("player", team);
+            model.addAttribute("playersByTeam", getPlayersByTeam(team));
             model.addAttribute("name", team.getTeamName());
             model.addAttribute("player0", avgTeam);
+            model.addAttribute("isTeam", true);
         }
         else model.addAttribute("noPlayer", "Nie ma takiej drużyny");
         return "playerView2";
+    }
+
+    private List<PogrupowaneStatsZawodPozycjeUwzglednione> getPlayersByTeam(SredniaDruzynyPozycjeUwzglednione team) {
+        return ppRepository
+                .getPogrypowaneStatsZawodPozycjeUwzglednioneByTeamIdAndSeason(team.getTeamId(), team.getSeason());
     }
 
     @GetMapping("/compare/year/{year}/teams/{teamA}&{teamB}")
