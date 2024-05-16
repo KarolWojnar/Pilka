@@ -7,7 +7,7 @@ import lombok.Setter;
 @Entity
 @Getter
 @Setter
-public class SredniaZeWszystkiego {
+public class TeamAvg {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -22,7 +22,7 @@ public class SredniaZeWszystkiego {
     @Column(name = "Z uwzględnieniem pozycji")
     private boolean czyUwzglednionePozycje;
 
-    public SredniaZeWszystkiego() {
+    public TeamAvg() {
     }
     @Column(name = "raiting druzyny")
     private double raiting;

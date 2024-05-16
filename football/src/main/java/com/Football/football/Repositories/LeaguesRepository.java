@@ -1,7 +1,10 @@
 package com.Football.football.Repositories;
 
-import com.Football.football.Tables.League;
+import com.Football.football.Tables.Leagues;
 import org.springframework.data.repository.CrudRepository;
 
-public interface LeaguesRepository extends CrudRepository<League, Long> {
+import java.util.Optional;
+
+public interface LeaguesRepository extends CrudRepository<Leagues, Long> {
+    Optional<Leagues> getFirstByLeagueId(int id);
 }

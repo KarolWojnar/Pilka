@@ -13,22 +13,21 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
 
 @Service
 public class PlayerStatsService {
 
-    private final StatystykiZawodnikaRepository statystykiZawodnikaRepository;
-    private final TeamStatsRepository teamStatsRepository;
-    private final PogrupowaneRepository pogrupowaneRepository;
-    private final SredniaDruzynyRepository sredniaDruzynyRepository;
-    private final PogrupowanePozycjamiRepository pogrupowanePozycjamiRepository;
-    private final SrDruzynyPozycjeRepository srDruzynyPozycjeRepository;
+    private final PlayersStatsRepo statystykiZawodnikaRepository;
+    private final TeamStatsRepo teamStatsRepository;
+    private final PlayerStatsGroupRepo pogrupowaneRepository;
+    private final TeamGroupAvgRepo sredniaDruzynyRepository;
+    private final PlayerStatsGroupWPosRepo pogrupowanePozycjamiRepository;
+    private final TeamGroupAvgWPosRepo srDruzynyPozycjeRepository;
 
     @Autowired
-    public PlayerStatsService(StatystykiZawodnikaRepository statystykiZawodnikaRepository, TeamStatsRepository teamStatsRepository, PogrupowaneRepository pogrupowaneRepository, SredniaDruzynyRepository sredniaDruzynyRepository, PogrupowanePozycjamiRepository pogrupowanePozycjamiRepository, SrDruzynyPozycjeRepository srDruzynyPozycjeRepository) {
+    public PlayerStatsService(PlayersStatsRepo statystykiZawodnikaRepository, TeamStatsRepo teamStatsRepository, PlayerStatsGroupRepo pogrupowaneRepository, TeamGroupAvgRepo sredniaDruzynyRepository, PlayerStatsGroupWPosRepo pogrupowanePozycjamiRepository, TeamGroupAvgWPosRepo srDruzynyPozycjeRepository) {
         this.statystykiZawodnikaRepository = statystykiZawodnikaRepository;
         this.teamStatsRepository = teamStatsRepository;
         this.pogrupowaneRepository = pogrupowaneRepository;
@@ -58,24 +57,27 @@ public class PlayerStatsService {
                         JSONObject playerStats = statsArray.getJSONObject(i);
                         int isActive = playerStats.getJSONArray("statistics").getJSONObject(0).getJSONObject("games").optInt("minutes", 0);
                         if (isActive == 0) continue;
-                        Optional<StatystykiZawodnika> optional = statystykiZawodnikaRepository.getStatystykiZawodnikaByPlayerIdAndTeamIdAndSeason(playerStats.getJSONObject("player").getInt("id"), teamId, season);
+                        Optional<PlayerStats> optional = statystykiZawodnikaRepository.getStatystykiZawodnikaByPlayerIdAndTeamIdAndSeason(playerStats.getJSONObject("player").getInt("id"), teamId, season);
 
                         if (optional.isPresent()) {
-                            StatystykiZawodnika toUpdate = optional.get();
+                            PlayerStats toUpdate = optional.get();
                             statystykiZawodnikaRepository.delete(toUpdate);
                         }
-                        Optional<StatystykiZawodnika> moreMinuteOptionalPlayer = statystykiZawodnikaRepository.getStatystykiZawodnikaByPlayerIdAndSeason(playerStats.getJSONObject("player").getInt("id"), season);
+                        Optional<PlayerStats> moreMinuteOptionalPlayer = statystykiZawodnikaRepository.getStatystykiZawodnikaByPlayerIdAndSeason(playerStats.getJSONObject("player").getInt("id"), season);
                         if (moreMinuteOptionalPlayer.isPresent()) {
-                            StatystykiZawodnika playerX = moreMinuteOptionalPlayer.get();
+                            PlayerStats playerX = moreMinuteOptionalPlayer.get();
                             System.out.println(playerX.getMinuty());
                             System.out.println(isActive);
                             if (playerX.getMinuty() < (float) isActive) statystykiZawodnikaRepository.delete(playerX);
                             else continue;
                         }
 
-                        StatystykiZawodnika player = new StatystykiZawodnika();
+                        PlayerStats player = new PlayerStats();
 
-                        player.setTeamId((long) teamId);
+                        Optional<TeamStats> opTeam = teamStatsRepository.findFirstByTeamId((long) teamId);
+                        if (opTeam.isPresent()) {
+                            player.setTeamStats(opTeam.get());
+                        }
                         player.setSeason((long) season);
                         player.setPlayerId(playerStats.getJSONObject("player").getLong("id"));
                         player.setImie(playerStats.getJSONObject("player").getString("firstname"));
@@ -138,17 +140,17 @@ public class PlayerStatsService {
         return all.toString();
     }
 
-    public void getAvgOfAllPlayers(Iterable<StatystykiZawodnika> players, boolean isPositions, String whereIsPlaying) {
-        Iterable<StatystykiDruzyny> teams = teamStatsRepository.findAll();
+    public void getAvgOfAllPlayers(Iterable<PlayerStats> players, boolean isPositions, String whereIsPlaying) {
+        Iterable<TeamStats> teams = teamStatsRepository.findAll();
 
         double fixturesCount = 0.0;
-        for (StatystykiDruzyny team : teams) {
+        for (TeamStats team : teams) {
             fixturesCount += team.getSumaSpotkan();
         }
 
         double sumPasses = 0, sumKeyPasses = 0, sumDribbleWon = 0, sumShootsOnGoal = 0, sumFoulsCommited = 0,
                 sumRedCards = 0, sumYellowCards = 0, sumDuelsLoss = 0, sumFoulsDrawn = 0, sumInterpWon = 0, sumDuelsWon = 0;
-        for (StatystykiZawodnika player : players) {
+        for (PlayerStats player : players) {
             sumPasses += player.getPodania();
             sumKeyPasses += player.getPodaniaKluczowe();
             sumDribbleWon += player.getDryblingiWygrane();
@@ -162,7 +164,7 @@ public class PlayerStatsService {
             sumDuelsWon += player.getPojedynkiWygrane();
         }
         double goleAsystySuma = 0.0;
-        for (StatystykiDruzyny team : teams) {
+        for (TeamStats team : teams) {
             goleAsystySuma += team.getGoleStrzeloneNaWyjezdzie();
             goleAsystySuma += team.getGoleStrzeloneWDomu();
         }
@@ -187,15 +189,15 @@ public class PlayerStatsService {
         else getAvgForGKeappers(statystykiZawodnikaRepository.getStatystykiZawodnikasByPozycja("GOALKEEPER"), weights);
     }
 
-    private void calculateWeightAndSave(Iterable<StatystykiZawodnika> players, double[] weights, boolean isPos) {
-        for (StatystykiZawodnika player : players) {
+    private void calculateWeightAndSave(Iterable<PlayerStats> players, double[] weights, boolean isPos) {
+        for (PlayerStats player : players) {
             if (!isPos) {
-                Optional<PogrupowaneStatystykiZawodnikow> optionalPlayer = pogrupowaneRepository
+                Optional<PlayersStatsGroup> optionalPlayer = pogrupowaneRepository
                         .getPogrupowaneStatystykiZawodnikowByPlayerIdAndSeason(player.getPlayerId(), player.getSeason());
-                PogrupowaneStatystykiZawodnikow zawodnik = new PogrupowaneStatystykiZawodnikow();
+                PlayersStatsGroup zawodnik = new PlayersStatsGroup();
                 zawodnik.setImie(player.getImie() + " " + player.getNazwisko());
                 zawodnik.setPlayerId(player.getPlayerId());
-                zawodnik.setTeamId(player.getTeamId());
+                zawodnik.setTeamId(player.getTeamStats().getTeamId());
                 zawodnik.setSeason(player.getSeason());
                 zawodnik.setPozycja(player.getPozycja());
 
@@ -225,7 +227,7 @@ public class PlayerStatsService {
                 zawodnik.setObronaKotrolaPrzeciwnika(interceptionsWonPerMinute + foulsDrawnPerMinute + duelsWonPerMinute);
 
                 if (optionalPlayer.isPresent()) {
-                    PogrupowaneStatystykiZawodnikow updatePlayer = optionalPlayer.get();
+                    PlayersStatsGroup updatePlayer = optionalPlayer.get();
                     pogrupowaneRepository.delete(updatePlayer);
                 }
                 pogrupowaneRepository.save(zawodnik);
@@ -235,20 +237,20 @@ public class PlayerStatsService {
         }
     }
 
-    public void getAvgForGKeappers(Iterable<StatystykiZawodnika> goalkeepers, double[] weights) {
-        for (StatystykiZawodnika goalkeeper : goalkeepers) {
+    public void getAvgForGKeappers(Iterable<PlayerStats> goalkeepers, double[] weights) {
+        for (PlayerStats goalkeeper : goalkeepers) {
             setStatsAndSave(weights, goalkeeper);
         }
     }
 
-    private void setStatsAndSave(double[] weights, StatystykiZawodnika goalkeeper) {
-        Optional<PogrupowaneStatsZawodPozycjeUwzglednione> optionalPlayer = pogrupowanePozycjamiRepository
+    private void setStatsAndSave(double[] weights, PlayerStats goalkeeper) {
+        Optional<PlayersStatsGroupWPos> optionalPlayer = pogrupowanePozycjamiRepository
                 .getPogrypowaneStatsZawodPozycjeUwzglednioneByPlayerIdAndSeason(goalkeeper.getPlayerId(), goalkeeper.getSeason());
-        PogrupowaneStatsZawodPozycjeUwzglednione zawodnik = new PogrupowaneStatsZawodPozycjeUwzglednione();
+        PlayersStatsGroupWPos zawodnik = new PlayersStatsGroupWPos();
 
         zawodnik.setImie(goalkeeper.getImie() + " " + goalkeeper.getNazwisko());
         zawodnik.setPlayerId(goalkeeper.getPlayerId());
-        zawodnik.setTeamId(goalkeeper.getTeamId());
+        zawodnik.setTeamId(goalkeeper.getTeamStats().getTeamId());
         zawodnik.setSeason(goalkeeper.getSeason());
         zawodnik.setPozycja(goalkeeper.getPozycja());
 
@@ -277,7 +279,7 @@ public class PlayerStatsService {
         zawodnik.setObronaKotrolaPrzeciwnika(interceptionsWonPerMinute + foulsDrawnPerMinute + duelsWonPerMinute);
 
         if (optionalPlayer.isPresent()) {
-            PogrupowaneStatsZawodPozycjeUwzglednione updatePlayer = optionalPlayer.get();
+            PlayersStatsGroupWPos updatePlayer = optionalPlayer.get();
             pogrupowanePozycjamiRepository.delete(updatePlayer);
         }
         pogrupowanePozycjamiRepository.save(zawodnik);
@@ -289,15 +291,15 @@ public class PlayerStatsService {
             Long season = (Long) singleCombination[0];
             Long teamId = (Long) singleCombination[1];
 
-            List<PogrupowaneStatystykiZawodnikow> players = pogrupowaneRepository.getPogrupowaneStatystykiZawodnikowByTeamIdAndSeason(teamId, season);
-            Optional<SredniaDruzyny> optionalSredniaDruzyny = sredniaDruzynyRepository.getSredniaDruzynyByTeamIdAndSeason(teamId, season);
+            List<PlayersStatsGroup> players = pogrupowaneRepository.getPogrupowaneStatystykiZawodnikowByTeamIdAndSeason(teamId, season);
+            Optional<TeamGroupAvg> optionalSredniaDruzyny = sredniaDruzynyRepository.getSredniaDruzynyByTeamIdAndSeason(teamId, season);
             if (optionalSredniaDruzyny.isPresent()) {
-                SredniaDruzyny prevTeam = optionalSredniaDruzyny.get();
+                TeamGroupAvg prevTeam = optionalSredniaDruzyny.get();
                 sredniaDruzynyRepository.delete(prevTeam);
             }
             double sum = 0, avgPodaniaKreatywanosc = 0, avgDryblingSkutecznosc = 0, avgFizycznoscInterakcje = 0, avgObronaKotrolaPrzeciwnika = 0;
 
-            for (PogrupowaneStatystykiZawodnikow player : players) {
+            for (PlayersStatsGroup player : players) {
                 sum++;
                 avgFizycznoscInterakcje += player.getFizycznoscInterakcje();
                 avgDryblingSkutecznosc += player.getDryblingSkutecznosc();
@@ -310,12 +312,12 @@ public class PlayerStatsService {
             avgObronaKotrolaPrzeciwnika /= sum;
             avgPodaniaKreatywanosc /= sum;
 
-            SredniaDruzyny team = new SredniaDruzyny();
+            TeamGroupAvg team = new TeamGroupAvg();
             team.setTeamId(teamId);
             team.setSeason(season);
-            Optional<StatystykiDruzyny> optionalName = teamStatsRepository.findFirstByTeamId(teamId);
+            Optional<TeamStats> optionalName = teamStatsRepository.findFirstByTeamId(teamId);
             optionalName.ifPresent(statystykiDruzyny -> team.setTeamName(statystykiDruzyny.getTeamName()));
-            optionalName.ifPresent(statystykiDruzyny -> team.setLeagueId(statystykiDruzyny.getLeagueId()));
+            optionalName.ifPresent(statystykiDruzyny -> team.setLeagueId(statystykiDruzyny.getLeague().getLeagueId()));
             team.setDryblingSkutecznosc(avgDryblingSkutecznosc);
             team.setFizycznoscInterakcje(avgFizycznoscInterakcje);
             team.setPodaniaKreatywnosc(avgPodaniaKreatywanosc);
@@ -331,17 +333,17 @@ public class PlayerStatsService {
             Long season = (Long) singleCombination[0];
             Long teamId = (Long) singleCombination[1];
 
-            List<PogrupowaneStatsZawodPozycjeUwzglednione> players = pogrupowanePozycjamiRepository
+            List<PlayersStatsGroupWPos> players = pogrupowanePozycjamiRepository
                     .getPogrypowaneStatsZawodPozycjeUwzglednioneByTeamIdAndSeason(teamId, season);
-            Optional<SredniaDruzynyPozycjeUwzglednione> optionalSredniaDruzyny = srDruzynyPozycjeRepository
+            Optional<TeamGroupAvgWPos> optionalSredniaDruzyny = srDruzynyPozycjeRepository
                     .getSredniaDruzynyPozycjeUwzglednioneByTeamIdAndSeason(teamId, season);
             if (optionalSredniaDruzyny.isPresent()) {
-                SredniaDruzynyPozycjeUwzglednione prevTeam = optionalSredniaDruzyny.get();
+                TeamGroupAvgWPos prevTeam = optionalSredniaDruzyny.get();
                 srDruzynyPozycjeRepository.delete(prevTeam);
             }
             double sum = 0, avgPodaniaKreatywanosc = 0, avgDryblingSkutecznosc = 0, avgFizycznoscInterakcje = 0, avgObronaKotrolaPrzeciwnika = 0;
 
-            for (PogrupowaneStatsZawodPozycjeUwzglednione player : players) {
+            for (PlayersStatsGroupWPos player : players) {
                 sum++;
                 avgFizycznoscInterakcje += player.getFizycznoscInterakcje();
                 avgDryblingSkutecznosc += player.getDryblingSkutecznosc();
@@ -354,12 +356,12 @@ public class PlayerStatsService {
             avgObronaKotrolaPrzeciwnika /= sum;
             avgPodaniaKreatywanosc /= sum;
 
-            SredniaDruzynyPozycjeUwzglednione team = new SredniaDruzynyPozycjeUwzglednione();
+            TeamGroupAvgWPos team = new TeamGroupAvgWPos();
             team.setTeamId(teamId);
             team.setSeason(season);
-            Optional<StatystykiDruzyny> optionalName = teamStatsRepository.findFirstByTeamId(teamId);
+            Optional<TeamStats> optionalName = teamStatsRepository.findFirstByTeamId(teamId);
             optionalName.ifPresent(statystykiDruzyny -> team.setTeamName(statystykiDruzyny.getTeamName()));
-            optionalName.ifPresent(statystykiDruzyny -> team.setLeagueId(statystykiDruzyny.getLeagueId()));
+            optionalName.ifPresent(statystykiDruzyny -> team.setLeagueId(statystykiDruzyny.getLeague().getLeagueId()));
             team.setDryblingSkutecznosc(avgDryblingSkutecznosc);
             team.setFizycznoscInterakcje(avgFizycznoscInterakcje);
             team.setPodaniaKreatywnosc(avgPodaniaKreatywanosc);
@@ -368,7 +370,7 @@ public class PlayerStatsService {
             srDruzynyPozycjeRepository.save(team);
         }
     }
-    public Iterable<StatystykiZawodnika> findAllPlayers() {
+    public Iterable<PlayerStats> findAllPlayers() {
         return statystykiZawodnikaRepository.findAll();
     }
 

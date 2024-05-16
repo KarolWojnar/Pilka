@@ -1,7 +1,7 @@
 package com.Football.football.Services;
 
-import com.Football.football.Repositories.FixturesRepository;
-import com.Football.football.Tables.StatystykiSpotkan;
+import com.Football.football.Repositories.FixturesStatsRepo;
+import com.Football.football.Tables.FixturesStats;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -18,10 +18,10 @@ import java.util.Optional;
 @Service
 public class FixturesService {
 
-    private final FixturesRepository fixturesRepository;
+    private final FixturesStatsRepo fixturesRepository;
 
     @Autowired
-    public FixturesService (FixturesRepository fixturesRepository) {
+    public FixturesService (FixturesStatsRepo fixturesRepository) {
         this.fixturesRepository = fixturesRepository;
     }
 
@@ -41,10 +41,10 @@ public class FixturesService {
             JSONArray jsonArray = jsonResponse.getJSONArray("response");
             for (int i = 0; i < jsonArray.length(); i++) {
                 JSONObject fixture = jsonArray.getJSONObject(i);
-                StatystykiSpotkan statystykiSpotkan = new StatystykiSpotkan();
+                FixturesStats statystykiSpotkan = new FixturesStats();
                 if (fixture.has("fixture")) {
                     int idFixture = fixture.getJSONObject("fixture").getInt("id");
-                    Optional<StatystykiSpotkan> optionalStatystykiSpotkan = fixturesRepository.findById((long) idFixture);
+                    Optional<FixturesStats> optionalStatystykiSpotkan = fixturesRepository.findById((long) idFixture);
                     if (optionalStatystykiSpotkan.isPresent()) continue;
                     statystykiSpotkan.setIdSpotkania(idFixture);
                     statystykiSpotkan.setDataSpotkania(fixture.getJSONObject("fixture").getString("date"));

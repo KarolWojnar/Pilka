@@ -3,13 +3,13 @@ package com.Football.football.Tables;
 import jakarta.persistence.*;
 
 @Entity
-public class StatystykiSpotkan {
+public class FixturesStats {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    public StatystykiSpotkan() {}
+    public FixturesStats() {}
 
     @Column(name = "Data spotkania")
     private String dataSpotkania;
