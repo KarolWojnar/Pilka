@@ -26,6 +26,6 @@ public class FixturesService {
         this.fixturesRepository = fixturesRepository;
     }
 
-    public void getFixtures(int teamId) throws {
+    public void getFixtures(int teamId) {
     }
 }
