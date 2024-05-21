@@ -81,4 +81,6 @@ public class TeamStats {
     private Leagues league;
     @OneToMany(mappedBy = "team_stats", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<PlayerStats> players;
+    @OneToMany(mappedBy = "team_stats", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<FixturesStats> fixtures;
 }

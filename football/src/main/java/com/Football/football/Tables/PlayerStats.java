@@ -4,6 +4,8 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.util.List;
+
 @Entity
 @Getter
 @Setter
@@ -59,5 +61,7 @@ public class PlayerStats {
     private double kartkiCzerwone;
     @Column(name = "Czy zawodnik jest kontuzjowany")
     private boolean czyKontuzjowany;
+    @OneToMany(mappedBy = "team_stats", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<FixturesStats> fixtures;
 
 }
