@@ -20,16 +20,15 @@ public class FixturesStats {
     private int fixtureId;
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id druzyny")
-    private TeamStats teamId;
+    private TeamStats teamStats;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id zawodnika")
-    private PlayerStats playerId;
+    private PlayerStats playerStats;
     @Column(name = "data spotkania")
     private LocalDateTime fixtureDate;
     @Column(name = "imie i nazwisko zawodnika")
     private String name;
-
     @Column(name = "minuty")
     private int minutes;
     @Column(name = "pozycja")
@@ -92,6 +91,6 @@ public class FixturesStats {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id druzyny przeciwnika")
-    private TeamStats teamEnemyId;
+    private TeamStats enemyStats;
 
 }

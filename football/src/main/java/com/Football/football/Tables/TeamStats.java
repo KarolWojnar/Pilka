@@ -78,9 +78,11 @@ public class TeamStats {
     private double redCards;
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "league_id")
-    private Leagues league;
-    @OneToMany(mappedBy = "team_stats", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private Leagues leagues;
+    @OneToMany(mappedBy = "teamStats", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<PlayerStats> players;
-    @OneToMany(mappedBy = "team_stats", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "teamStats", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<FixturesStats> fixtures;
+    @OneToMany(mappedBy = "enemyStats", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<FixturesStats> enemy;
 }

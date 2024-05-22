@@ -1,6 +1,7 @@
 package com.Football.football.Repositories;
 
 import com.Football.football.Tables.PlayerStats;
+import com.Football.football.Tables.TeamStats;
 import org.springframework.data.repository.CrudRepository;
 import org.springframework.data.jpa.repository.Query;
 
@@ -9,14 +10,11 @@ import java.util.Optional;
 
 public interface PlayersStatsRepo extends CrudRepository<PlayerStats, Long> {
 
-
-    Optional<PlayerStats> getStatystykiZawodnikaById(Long id);
-    Optional<PlayerStats> getStatystykiZawodnikaByPlayerIdAndTeamIdAndSeason(int id, int teamId, int season);
-    Optional<PlayerStats> getStatystykiZawodnikaByPlayerIdAndSeason(int id, int season);
+    Optional<PlayerStats> getPlayerStatsByPlayerIdAndTeamStatsAndSeason(Long id, TeamStats teamId, Long season);
+    Optional<PlayerStats> getStatystykiZawodnikaByPlayerIdAndSeason(Long id, Long season);
 
     Iterable<PlayerStats> getStatystykiZawodnikasByPozycja(String pos);
-    List<PlayerStats> getStatystykiZawodnikaByImieContaining(String name);
 
-    @Query("SELECT DISTINCT s.season, s.teamId FROM PlayerStats s")
-    List<Object[]> getDistinctBySeasonAndTeamId();
+    @Query("SELECT DISTINCT s.season, s.teamStats FROM PlayerStats s")
+    List<Object[]> getDistinctBySeasonAndTeamStats();
 }

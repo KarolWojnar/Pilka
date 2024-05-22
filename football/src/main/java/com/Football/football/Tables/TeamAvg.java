@@ -11,10 +11,9 @@ public class TeamAvg {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    @Column(name = "id drużyny")
-    private Long teamId;
-    @Column(name = "id ligi")
-    private int leagueId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "id druzyny")
+    private TeamStats teamStats;
 
     @Column(name = "Sezon rozgrywek")
     private Long season;
@@ -26,7 +25,5 @@ public class TeamAvg {
     }
     @Column(name = "raiting druzyny")
     private double raiting;
-    @Column(name = "Nazwa drużyny")
-    private String teamName;
 
 }

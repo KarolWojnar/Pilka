@@ -11,8 +11,9 @@ public class TeamGroupAvg {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    @Column(name = "id drużyny")
-    private Long teamId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "id druzyny")
+    private TeamStats teamStats;
     @Column(name = "Drybling i Skuteczność")
     private Double dryblingSkutecznosc;
     @Column(name = "Fizyczność i Interakcje")
@@ -25,6 +26,4 @@ public class TeamGroupAvg {
     private Double podaniaKreatywnosc;
     @Column(name = "Nazwa drużyny")
     private String teamName;
-    @Column(name = "id_ligi")
-    private int leagueId;
 }

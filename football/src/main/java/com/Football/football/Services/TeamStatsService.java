@@ -49,7 +49,7 @@ public class TeamStatsService {
             teamStats.setSeason((long) year);
             Optional<Leagues> league = leaguesRepository.getFirstByLeagueId(leagueId);
             if (league.isPresent()) {
-                teamStats.setLeague(league.get());
+                teamStats.setLeagues(league.get());
             }
             JSONObject fixtures = responseData.getJSONObject("fixtures");
             JSONObject played = fixtures.getJSONObject("played");
@@ -124,7 +124,7 @@ public class TeamStatsService {
         Iterable<TeamGroupAvg> allTeams = sredniaDruzynyRepository.findAll();
         for (TeamGroupAvg team : allTeams) {
             Optional<TeamAvg> optional = avgAllRepository
-                    .findSredniaZeWszystkiegoByTeamIdAndSeasonAndCzyUwzglednionePozycje(team.getTeamId(), team.getSeason(), false);
+                    .findSredniaZeWszystkiegoByTeamStatsAndSeasonAndCzyUwzglednionePozycje(team.getTeamStats(), team.getSeason(), false);
             if (optional.isPresent()) {
                 TeamAvg updateTeam = optional.get();
                 avgAllRepository.delete(updateTeam);
@@ -139,7 +139,7 @@ public class TeamStatsService {
         Iterable<TeamGroupAvgWPos> allTeams = srDruzynyPozycjeRepository.findAll();
         for (TeamGroupAvgWPos team : allTeams) {
             Optional<TeamAvg> optional = avgAllRepository
-                    .findSredniaZeWszystkiegoByTeamIdAndSeasonAndCzyUwzglednionePozycje(team.getTeamId(), team.getSeason(), true);
+                    .findSredniaZeWszystkiegoByTeamStatsAndSeasonAndCzyUwzglednionePozycje(team.getTeamStats(), team.getSeason(), true);
             if (optional.isPresent()) {
                 TeamAvg updateTeam = optional.get();
                 avgAllRepository.delete(updateTeam);
@@ -163,10 +163,8 @@ public class TeamStatsService {
         for (double x: weights) sum += x;
 
         avgTeam.setRaiting(summaryWeight / sum);
-        avgTeam.setTeamName(team.getTeamName());
-        avgTeam.setTeamId(team.getTeamId());
+        avgTeam.setTeamStats(team.getTeamStats());
         avgTeam.setSeason(team.getSeason());
-        avgTeam.setLeagueId(team.getLeagueId());
         avgTeam.setCzyUwzglednionePozycje(isPos);
         return avgTeam;
     }
@@ -187,11 +185,9 @@ public class TeamStatsService {
 
 
         avgTeam.setRaiting(summaryWeight / sum);
-        avgTeam.setTeamName(team.getTeamName());
-        avgTeam.setTeamId(team.getTeamId());
+        avgTeam.setTeamStats(team.getTeamStats());
         avgTeam.setSeason(team.getSeason());
         avgTeam.setCzyUwzglednionePozycje(isPos);
-        avgTeam.setLeagueId(team.getLeagueId());
         return avgTeam;
     }
 

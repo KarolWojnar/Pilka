@@ -13,8 +13,9 @@ public class TeamGroupAvgWPos {
     private Long id;
     @Column(name = "id ligi")
     private int leagueId;
-    @Column(name = "id drużyny")
-    private Long teamId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "id druzyny")
+    private TeamStats teamStats;
     @Column(name = "Drybling i Skuteczność")
     private Double dryblingSkutecznosc;
     @Column(name = "Fizyczność i Interakcje")

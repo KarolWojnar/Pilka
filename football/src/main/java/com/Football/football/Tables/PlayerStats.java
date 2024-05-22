@@ -61,7 +61,12 @@ public class PlayerStats {
     private double kartkiCzerwone;
     @Column(name = "Czy zawodnik jest kontuzjowany")
     private boolean czyKontuzjowany;
-    @OneToMany(mappedBy = "team_stats", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "playerStats", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<FixturesStats> fixtures;
+    @OneToMany(mappedBy = "playerStats", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<PlayersStatsGroup> playersStatsGroups;
+    @OneToMany(mappedBy = "playerStats", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<PlayersStatsGroupWPos> playersStatsGroupWPos;
+
 
 }
