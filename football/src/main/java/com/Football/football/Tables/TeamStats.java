@@ -20,7 +20,7 @@ public class TeamStats {
     @Column(name = "Nazwa drużyny")
     private String teamName;
     @Column(name = "id drużyny")
-    private Long teamId;
+    private long teamId;
     @Column(name = "sezon")
     private Long season;
     public TeamStats() {}

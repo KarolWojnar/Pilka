@@ -3,6 +3,7 @@ package com.Football.football.Services;
 import com.Football.football.Repositories.*;
 import com.Football.football.Tables.*;
 import lombok.RequiredArgsConstructor;
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.springframework.stereotype.Service;
@@ -25,10 +26,56 @@ public class TeamStatsService {
     private final TeamAvgRepo avgAllRepository;
     private final LeaguesRepository leaguesRepository;
 
-    public void updateTeamStats(int teamId, int year, int leagueId) throws IOException, InterruptedException, JSONException {
+    public void getAllTeamsByLeague(long leagueId, Long season) throws IOException, InterruptedException, JSONException {
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("https://api-football-beta.p.rapidapi.com/teams?league=" + leagueId + "&season=" + season))
+                .header("X-RapidAPI-Key", "d33e623437msha2a56a1ea6f5bfbp18d606jsndd5dc6ff099b")
+                .header("X-RapidAPI-Host", "api-football-beta.p.rapidapi.com")
+                .method("GET", HttpRequest.BodyPublishers.noBody())
+                .build();
+        HttpResponse<String> response = HttpClient.newHttpClient().send(request, HttpResponse.BodyHandlers.ofString());
+        String responseBody = response.body();
+        JSONObject jResponse = new JSONObject(responseBody);
+
+        if (jResponse.has("response")) {
+            getLeagueById(leagueId);
+            JSONArray teams = jResponse.getJSONArray("response");
+            for (int i = 0; i < teams.length(); i++) {
+                JSONObject team = teams.getJSONObject(i);
+                long teamId = team.getJSONObject("team").getLong("id");
+                updateTeamStats(teamId, season, leagueId);
+            }
+        }
+    }
+
+    private void getLeagueById(Long leagueId) throws IOException, InterruptedException, JSONException {
+        Optional<Leagues> optionalLeague = leaguesRepository.getFirstByLeagueId(leagueId);
+        if (optionalLeague.isEmpty()) {
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create("https://api-football-beta.p.rapidapi.com/leagues?id=" + leagueId))
+                    .header("X-RapidAPI-Key", "d33e623437msha2a56a1ea6f5bfbp18d606jsndd5dc6ff099b")
+                    .header("X-RapidAPI-Host", "api-football-beta.p.rapidapi.com")
+                    .method("GET", HttpRequest.BodyPublishers.noBody())
+                    .build();
+            HttpResponse<String> response = HttpClient.newHttpClient().send(request, HttpResponse.BodyHandlers.ofString());
+            String responseBody = response.body();
+            JSONObject jsonResponse = new JSONObject(responseBody);
+
+            if (jsonResponse.has("response")) {
+                JSONObject leagueObject = jsonResponse.getJSONArray("response").getJSONObject(0);
+                Leagues league = new Leagues();
+                league.setLeagueId(leagueId);
+                league.setLeagueName(leagueObject.getJSONObject("league").getString("name"));
+                league.setCountry(leagueObject.getJSONObject("country").getString("name"));
+                leaguesRepository.save(league);
+            }
+        }
+    }
+
+    public void updateTeamStats(long teamId, Long year, long leagueId) throws IOException, InterruptedException, JSONException {
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create("https://api-football-beta.p.rapidapi.com/teams/statistics?league=" + leagueId + "&team=" + teamId +"&season=" + year))
-                .header("X-RapidAPI-Key", "ffd6a2d4f7mshd804fef0d09cb33p131f2bjsnf34096b2c4ec")
+                .header("X-RapidAPI-Key", "d33e623437msha2a56a1ea6f5bfbp18d606jsndd5dc6ff099b")
                 .header("X-RapidAPI-Host", "api-football-beta.p.rapidapi.com")
                 .method("GET", HttpRequest.BodyPublishers.noBody())
                 .build();
@@ -45,8 +92,8 @@ public class TeamStatsService {
             }
             TeamStats teamStats = new TeamStats();
             teamStats.setTeamName(responseData.getJSONObject("team").getString("name"));
-            teamStats.setTeamId((long) teamId);
-            teamStats.setSeason((long) year);
+            teamStats.setTeamId(teamId);
+            teamStats.setSeason(year);
             Optional<Leagues> league = leaguesRepository.getFirstByLeagueId(leagueId);
             if (league.isPresent()) {
                 teamStats.setLeagues(league.get());

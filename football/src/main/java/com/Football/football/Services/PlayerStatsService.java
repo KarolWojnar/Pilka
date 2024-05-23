@@ -29,7 +29,7 @@ public class PlayerStatsService {
     private final TeamGroupAvgWPosRepo srDruzynyPozycjeRepository;
 
 
-    public String updatePlayerStats(int teamId, int season, int leagueId) throws IOException, InterruptedException, JSONException {
+    public String updatePlayerStats(Long teamId, Long season, Long leagueId) throws IOException, InterruptedException, JSONException {
         StringBuilder all = new StringBuilder();
         Optional<TeamStats> opTeam = teamStatsRepository.findFirstByTeamId((long) teamId);
 
@@ -371,7 +371,7 @@ public class PlayerStatsService {
                 team.setSeason(season);
                 Optional<TeamStats> optionalName = teamStatsRepository.findFirstByTeamId(teamId);
                 optionalName.ifPresent(statystykiDruzyny -> team.setTeamName(statystykiDruzyny.getTeamName()));
-                optionalName.ifPresent(statystykiDruzyny -> team.setLeagueId(statystykiDruzyny.getLeagues().getLeagueId()));
+                optionalName.ifPresent(statystykiDruzyny -> team.setLeagueId(Math.toIntExact(statystykiDruzyny.getLeagues().getLeagueId())));
                 team.setDryblingSkutecznosc(avgDryblingSkutecznosc);
                 team.setFizycznoscInterakcje(avgFizycznoscInterakcje);
                 team.setPodaniaKreatywnosc(avgPodaniaKreatywanosc);

@@ -26,13 +26,19 @@ public class FootballController {
     private final FixturesService fixturesService;
 
     @GetMapping("/getStatsForSeason/{teamId}&{year}&{leagueId}")
-    public String giveTeam(@PathVariable int teamId, @PathVariable int year, @PathVariable int leagueId) throws IOException, InterruptedException, JSONException {
+    public String giveTeam(@PathVariable Long teamId, @PathVariable Long year, @PathVariable Long leagueId) throws IOException, InterruptedException, JSONException {
         teamStatsService.updateTeamStats(teamId, year, leagueId);
         return "index";
     }
+    @GetMapping("getLeagueAll/{leagueId}&{season}")
+    String getAllTeamsByLeague(@PathVariable Long leagueId, @PathVariable Long season) throws IOException, InterruptedException, JSONException {
+        teamStatsService.getAllTeamsByLeague(leagueId, season);
+        return "index";
+    }
+
 
     @GetMapping("/getPlayers/{id}&{year}&{leagueId}")
-    public String give(@PathVariable int id, @PathVariable int year, @PathVariable int leagueId, Model model) throws IOException, InterruptedException, JSONException {
+    public String give(@PathVariable Long id, @PathVariable Long year, @PathVariable Long leagueId, Model model) throws IOException, InterruptedException, JSONException {
         model.addAttribute("team", playerStatsService.updatePlayerStats(id, year, leagueId));
         return "index";
     }
@@ -54,14 +60,13 @@ public class FootballController {
                     .method("GET", HttpRequest.BodyPublishers.noBody())
                     .build();
                 HttpResponse<String> response = HttpClient.newHttpClient().send(request, HttpResponse.BodyHandlers.ofString());
-                model.addAttribute("fixtures", response.body());
+
         } catch (IOException | InterruptedException e) {
             model.addAttribute("error", "Błąd podczas przetawrzania danych: "
             + e.getMessage());
             return "getFixtures";
         }
         return "redirect:/getFixtures";
-
     }
 
 }

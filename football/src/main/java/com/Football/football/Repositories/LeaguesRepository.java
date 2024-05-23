@@ -6,5 +6,5 @@ import org.springframework.data.repository.CrudRepository;
 import java.util.Optional;
 
 public interface LeaguesRepository extends CrudRepository<Leagues, Long> {
-    Optional<Leagues> getFirstByLeagueId(int id);
+    Optional<Leagues> getFirstByLeagueId(Long id);
 }
