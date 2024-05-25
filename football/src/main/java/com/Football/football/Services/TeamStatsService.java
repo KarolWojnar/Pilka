@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -26,10 +27,12 @@ public class TeamStatsService {
     private final TeamAvgRepo avgAllRepository;
     private final LeaguesRepository leaguesRepository;
 
+    @Value("${api.key}")
+    private String apiKey;
     public void getAllTeamsByLeague(long leagueId, Long season) throws IOException, InterruptedException, JSONException {
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create("https://api-football-beta.p.rapidapi.com/teams?league=" + leagueId + "&season=" + season))
-                .header("X-RapidAPI-Key", "d33e623437msha2a56a1ea6f5bfbp18d606jsndd5dc6ff099b")
+                .header("X-RapidAPI-Key", apiKey)
                 .header("X-RapidAPI-Host", "api-football-beta.p.rapidapi.com")
                 .method("GET", HttpRequest.BodyPublishers.noBody())
                 .build();
@@ -53,7 +56,7 @@ public class TeamStatsService {
         if (optionalLeague.isEmpty()) {
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create("https://api-football-beta.p.rapidapi.com/leagues?id=" + leagueId))
-                    .header("X-RapidAPI-Key", "d33e623437msha2a56a1ea6f5bfbp18d606jsndd5dc6ff099b")
+                    .header("X-RapidAPI-Key", apiKey)
                     .header("X-RapidAPI-Host", "api-football-beta.p.rapidapi.com")
                     .method("GET", HttpRequest.BodyPublishers.noBody())
                     .build();
@@ -75,7 +78,7 @@ public class TeamStatsService {
     public void updateTeamStats(long teamId, Long year, long leagueId) throws IOException, InterruptedException, JSONException {
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create("https://api-football-beta.p.rapidapi.com/teams/statistics?league=" + leagueId + "&team=" + teamId +"&season=" + year))
-                .header("X-RapidAPI-Key", "d33e623437msha2a56a1ea6f5bfbp18d606jsndd5dc6ff099b")
+                .header("X-RapidAPI-Key", apiKey)
                 .header("X-RapidAPI-Host", "api-football-beta.p.rapidapi.com")
                 .method("GET", HttpRequest.BodyPublishers.noBody())
                 .build();

@@ -9,6 +9,6 @@ import java.util.List;
 import java.util.Optional;
 
 public interface PlayerStatsGroupWPosRepo extends CrudRepository<PlayersStatsGroupWPos, Long> {
-    Optional<PlayersStatsGroupWPos> getPogrypowaneStatsZawodPozycjeUwzglednioneByPlayerStatsAndSeason(PlayerStats playerStats, Long season);
-    List<PlayersStatsGroupWPos> getPogrypowaneStatsZawodPozycjeUwzglednioneByTeamStatsAndSeason(TeamStats teamStats, Long season);
+    Optional<PlayersStatsGroupWPos> getPlayerStatsGroupWPosByPlayerStatsAndSeason(PlayerStats playerStats, Long season);
+    List<PlayersStatsGroupWPos> getPlayerStatsGroupWPosByTeamStatsAndSeason(TeamStats teamStats, Long season);
 }

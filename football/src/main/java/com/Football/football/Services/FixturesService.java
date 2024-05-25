@@ -1,16 +1,28 @@
 package com.Football.football.Services;
 
 import com.Football.football.Repositories.FixturesStatsRepo;
-import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+
+import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
 public class FixturesService {
+    private final FixturesStatsRepo fixtureRepository;
 
-    private final FixturesStatsRepo fixturesRepository;
+    public void saveAllFixtures() {
+        // TODO: Implementacja zapisu wszystkich spotkań
+    }
 
-    public void getFixtures(int teamId) {
+    public void updateMatch(Long id) {
+        // TODO: Implementacja aktualizacji spotkania
+    }
+
+    public void createMatch(Long id) {
+        // TODO: Implementacja tworzenia spotkania
+    }
+
+    public void getFixture(int teamId) {
+        // TODO: Pobranie jednego spotkania
     }
 }

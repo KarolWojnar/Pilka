@@ -3,19 +3,17 @@ package com.Football.football.Controllers;
 import com.Football.football.Repositories.PlayersStatsRepo;
 import com.Football.football.Services.PlayerStatsService;
 import com.Football.football.Services.TeamStatsService;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 
 @Controller
+@RequiredArgsConstructor
 public class ManipulateController {
 
-    @Autowired
-    private PlayerStatsService playerStatsService;
-    @Autowired
-    private TeamStatsService teamStatsService;
-    @Autowired
-    private PlayersStatsRepo statystykiZawodnikaRepository;
+    private final PlayerStatsService playerStatsService;
+    private final TeamStatsService teamStatsService;
+    private final PlayersStatsRepo statystykiZawodnikaRepository;
 
     @GetMapping("/get-avg")
     public String getAvg() {

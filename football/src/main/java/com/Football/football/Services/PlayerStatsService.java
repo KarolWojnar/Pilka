@@ -25,13 +25,14 @@ public class PlayerStatsService {
     private final TeamStatsRepo teamStatsRepository;
     private final PlayerStatsGroupRepo pogrupowaneRepository;
     private final TeamGroupAvgRepo sredniaDruzynyRepository;
+    private final PlayersStatsRepo playersStatsRepo;
     private final PlayerStatsGroupWPosRepo pogrupowanePozycjamiRepository;
     private final TeamGroupAvgWPosRepo srDruzynyPozycjeRepository;
 
 
     public String updatePlayerStats(Long teamId, Long season, Long leagueId) throws IOException, InterruptedException, JSONException {
         StringBuilder all = new StringBuilder();
-        Optional<TeamStats> opTeam = teamStatsRepository.findFirstByTeamId((long) teamId);
+        Optional<TeamStats> opTeam = teamStatsRepository.findFirstByTeamId(teamId);
 
         if (!opTeam.isPresent()) {
             throw new IllegalArgumentException("Team with ID " + teamId + " not found");
@@ -39,7 +40,10 @@ public class PlayerStatsService {
 
         TeamStats teamStats = opTeam.get();
 
-        for (int page = 1; page <= 3; page++) {
+        int page = 1;
+        boolean hasNextPage = true;
+
+        while (hasNextPage) {
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create("https://api-football-beta.p.rapidapi.com/players?season=" + season + "&league=" + leagueId +"&team=" + teamId + "&page=" + page))
                     .header("X-RapidAPI-Key", "d33e623437msha2a56a1ea6f5bfbp18d606jsndd5dc6ff099b")
@@ -78,7 +82,7 @@ public class PlayerStatsService {
 
                     PlayerStats player = new PlayerStats();
                     player.setTeamStats(teamStats);
-                    player.setSeason((long) season);
+                    player.setSeason(season);
                     player.setPlayerId(playerId);
                     player.setImie(playerStats.getJSONObject("player").getString("firstname"));
                     player.setNazwisko(playerStats.getJSONObject("player").getString("lastname"));
@@ -134,6 +138,9 @@ public class PlayerStatsService {
                     }
                     statystykiZawodnikaRepository.save(player);
                 }
+
+                hasNextPage = jsonResponse.has("paging") && jsonResponse.getJSONObject("paging").getBoolean("next");
+                if (hasNextPage) page++;
             }
         }
         return all.toString();
@@ -244,7 +251,7 @@ public class PlayerStatsService {
 
     private void setStatsAndSave(double[] weights, PlayerStats goalkeeper) {
         Optional<PlayersStatsGroupWPos> optionalPlayer = pogrupowanePozycjamiRepository
-                .getPogrypowaneStatsZawodPozycjeUwzglednioneByPlayerStatsAndSeason(goalkeeper, goalkeeper.getSeason());
+                .getPlayerStatsGroupWPosByPlayerStatsAndSeason(goalkeeper, goalkeeper.getSeason());
         PlayersStatsGroupWPos zawodnik = new PlayersStatsGroupWPos();
 
         zawodnik.setImie(goalkeeper.getImie() + " " + goalkeeper.getNazwisko());
@@ -341,7 +348,7 @@ public class PlayerStatsService {
             Optional<TeamStats> teamStatsOp = teamStatsRepository.findFirstByTeamId(teamId);
             if (teamStatsOp.isPresent()) {
                 List<PlayersStatsGroupWPos> players = pogrupowanePozycjamiRepository
-                        .getPogrypowaneStatsZawodPozycjeUwzglednioneByTeamStatsAndSeason(teamStatsOp.get(), season);
+                        .getPlayerStatsGroupWPosByTeamStatsAndSeason(teamStatsOp.get(), season);
                 Optional<TeamGroupAvgWPos> optionalSredniaDruzyny = srDruzynyPozycjeRepository
                         .getSredniaDruzynyPozycjeUwzglednioneByTeamStatsAndSeason(teamStatsOp.get(), season);
                 if (optionalSredniaDruzyny.isPresent()) {
@@ -381,8 +388,41 @@ public class PlayerStatsService {
             }
         }
     }
-    public Iterable<PlayerStats> findAllPlayers() {
-        return statystykiZawodnikaRepository.findAll();
+
+    public Optional<PlayerStats> getPlayerById(Long id) {
+        return playersStatsRepo.findById(id);
+    }
+
+    public Iterable<PlayerStats> getPlayersByTeamId(Long teamId) {
+        Optional<TeamStats> opTeam = teamStatsRepository.findFirstByTeamId(teamId);
+        Iterable<PlayerStats> players = null;
+        if (opTeam.isPresent()) {
+            players = playersStatsRepo.findPlayerStatsByTeamStats(opTeam.get());
+        }
+        return players;
+    }
+
+    public Iterable<PlayerStats> getAveragePlayerRatings() {
+        return List.of();
+    }
+
+    public void savePlayer(PlayerStats player) {
+        playersStatsRepo.save(player);
+    }
+
+    public void updatePlayer(Long id, PlayerStats player) {
+        Optional<PlayerStats> existingPlayer = playersStatsRepo.findById(id);
+        if (existingPlayer.isPresent()) {
+            PlayerStats p = existingPlayer.get();
+            p.setImie(player.getImie());
+            p.setTeamStats(player.getTeamStats());
+            p.setRating(player.getRating());
+            playersStatsRepo.save(p);
+        }
+    }
+
+    public void deletePlayer(Long id) {
+        playersStatsRepo.deleteById(id);
     }
 
 }
