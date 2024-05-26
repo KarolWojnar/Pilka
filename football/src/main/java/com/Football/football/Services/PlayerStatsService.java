@@ -28,16 +28,20 @@ public class PlayerStatsService {
     private final PlayersStatsRepo playersStatsRepo;
     private final PlayerStatsGroupWPosRepo pogrupowanePozycjamiRepository;
     private final TeamGroupAvgWPosRepo srDruzynyPozycjeRepository;
-    @Value("${api.key3}")
+    @Value("${api.key}")
     private String apiKey;
-    @Value("${api.key4}")
+    @Value("${api.key2}")
     private String apiKey2;
-    @Value("${api.key5}")
+    @Value("${api.key3}")
     private String apiKey3;
-    @Value("${api.key6}")
+    @Value("${api.key4}")
     private String apiKey4;
-    @Value("${api.key7}")
+    @Value("${api.key5}")
     private String apiKey5;
+    @Value("${api.key6}")
+    private String apiKey6;
+    @Value("${api.key7}")
+    private String apiKey7;
     private int requestCounter = 0;
     private static final int REQUEST_LIMIT = 100;
 
@@ -50,13 +54,17 @@ public class PlayerStatsService {
             return apiKey3;
         } else if ((requestCounter >= (REQUEST_LIMIT * 3)) && ((REQUEST_LIMIT * 4) > requestCounter)){
             return apiKey4;
-        } else {
+        } else if ((requestCounter >= (REQUEST_LIMIT * 4)) && ((REQUEST_LIMIT * 5) > requestCounter)){
             return apiKey5;
+        } else if ((requestCounter >= (REQUEST_LIMIT * 5)) && ((REQUEST_LIMIT * 6) > requestCounter)){
+            return apiKey6;
+        } else {
+            return apiKey7;
         }
     }
     private void incrementRequestCounter() {
         requestCounter++;
-        if (requestCounter >= 5 * REQUEST_LIMIT) {
+        if (requestCounter >= 7 * REQUEST_LIMIT) {
             requestCounter = 0;
         }
     }

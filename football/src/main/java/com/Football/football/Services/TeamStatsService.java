@@ -29,15 +29,55 @@ public class TeamStatsService {
 
     @Value("${api.key}")
     private String apiKey;
+    @Value("${api.key2}")
+    private String apiKey2;
+    @Value("${api.key3}")
+    private String apiKey3;
+    @Value("${api.key4}")
+    private String apiKey4;
+    @Value("${api.key5}")
+    private String apiKey5;
+    @Value("${api.key6}")
+    private String apiKey6;
+    @Value("${api.key7}")
+    private String apiKey7;
+    private int requestCounter = 0;
+    private static final int REQUEST_LIMIT = 100;
+
+    private String getApiKey() {
+        if (requestCounter < REQUEST_LIMIT) {
+            return apiKey;
+        } else if ((requestCounter >= REQUEST_LIMIT) && ((REQUEST_LIMIT * 2) > requestCounter)){
+            return apiKey2;
+        } else if ((requestCounter >= (REQUEST_LIMIT * 2)) && ((REQUEST_LIMIT * 3) > requestCounter)){
+            return apiKey3;
+        } else if ((requestCounter >= (REQUEST_LIMIT * 3)) && ((REQUEST_LIMIT * 4) > requestCounter)){
+            return apiKey4;
+        } else if ((requestCounter >= (REQUEST_LIMIT * 4)) && ((REQUEST_LIMIT * 5) > requestCounter)){
+            return apiKey5;
+        } else if ((requestCounter >= (REQUEST_LIMIT * 5)) && ((REQUEST_LIMIT * 6) > requestCounter)){
+            return apiKey6;
+        } else {
+            return apiKey7;
+        }
+    }
+    private void incrementRequestCounter() {
+        requestCounter++;
+        if (requestCounter >= 7 * REQUEST_LIMIT) {
+            requestCounter = 0;
+        }
+    }
+
     public void getAllTeamsByLeague(long leagueId, Long season) throws IOException, InterruptedException, JSONException {
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create("https://api-football-beta.p.rapidapi.com/teams?league=" + leagueId + "&season=" + season))
-                .header("X-RapidAPI-Key", apiKey)
+                .header("X-RapidAPI-Key", getApiKey())
                 .header("X-RapidAPI-Host", "api-football-beta.p.rapidapi.com")
                 .method("GET", HttpRequest.BodyPublishers.noBody())
                 .build();
         HttpResponse<String> response = HttpClient.newHttpClient().send(request, HttpResponse.BodyHandlers.ofString());
         String responseBody = response.body();
+        incrementRequestCounter();
         JSONObject jResponse = new JSONObject(responseBody);
 
         if (jResponse.has("response")) {
@@ -56,12 +96,13 @@ public class TeamStatsService {
         if (optionalLeague.isEmpty()) {
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create("https://api-football-beta.p.rapidapi.com/leagues?id=" + leagueId))
-                    .header("X-RapidAPI-Key", apiKey)
+                    .header("X-RapidAPI-Key", getApiKey())
                     .header("X-RapidAPI-Host", "api-football-beta.p.rapidapi.com")
                     .method("GET", HttpRequest.BodyPublishers.noBody())
                     .build();
             HttpResponse<String> response = HttpClient.newHttpClient().send(request, HttpResponse.BodyHandlers.ofString());
             String responseBody = response.body();
+            incrementRequestCounter();
             JSONObject jsonResponse = new JSONObject(responseBody);
 
             if (jsonResponse.has("response")) {
@@ -78,12 +119,13 @@ public class TeamStatsService {
     public void updateTeamStats(long teamId, Long year, long leagueId) throws IOException, InterruptedException, JSONException {
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create("https://api-football-beta.p.rapidapi.com/teams/statistics?league=" + leagueId + "&team=" + teamId +"&season=" + year))
-                .header("X-RapidAPI-Key", apiKey)
+                .header("X-RapidAPI-Key", getApiKey())
                 .header("X-RapidAPI-Host", "api-football-beta.p.rapidapi.com")
                 .method("GET", HttpRequest.BodyPublishers.noBody())
                 .build();
         HttpResponse<String> response2 = HttpClient.newHttpClient().send(request, HttpResponse.BodyHandlers.ofString());
         String responseBody = response2.body();
+        incrementRequestCounter();
         JSONObject jsonResponse = new JSONObject(responseBody);
         if (jsonResponse.has("response")) {
             JSONObject responseData = jsonResponse.getJSONObject("response");
