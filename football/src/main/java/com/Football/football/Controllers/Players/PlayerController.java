@@ -54,6 +54,13 @@ public class PlayerController {
         return "index";
     }
 
+    @GetMapping("/getPlayersByLeague/{year}&{leagueId}")
+    public String givePlayers(@PathVariable Long year, @PathVariable Long leagueId, Model model) throws IOException, InterruptedException, JSONException {
+        playerService.updatePlayersLeague(year, leagueId);
+        model.addAttribute("team", "Asd");
+        return "index";
+    }
+
     @PutMapping("/update/{id}")
     public String updatePlayer(@PathVariable Long id, PlayerStats player) {
         playerService.updatePlayer(id, player);

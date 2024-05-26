@@ -6,7 +6,7 @@ import lombok.RequiredArgsConstructor;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -28,7 +28,61 @@ public class PlayerStatsService {
     private final PlayersStatsRepo playersStatsRepo;
     private final PlayerStatsGroupWPosRepo pogrupowanePozycjamiRepository;
     private final TeamGroupAvgWPosRepo srDruzynyPozycjeRepository;
+    @Value("${api.key3}")
+    private String apiKey;
+    @Value("${api.key4}")
+    private String apiKey2;
+    @Value("${api.key5}")
+    private String apiKey3;
+    @Value("${api.key6}")
+    private String apiKey4;
+    @Value("${api.key7}")
+    private String apiKey5;
+    private int requestCounter = 0;
+    private static final int REQUEST_LIMIT = 100;
 
+    private String getApiKey() {
+        if (requestCounter < REQUEST_LIMIT) {
+            return apiKey;
+        } else if ((requestCounter >= REQUEST_LIMIT) && ((REQUEST_LIMIT * 2) > requestCounter)){
+            return apiKey2;
+        } else if ((requestCounter >= (REQUEST_LIMIT * 2)) && ((REQUEST_LIMIT * 3) > requestCounter)){
+            return apiKey3;
+        } else if ((requestCounter >= (REQUEST_LIMIT * 3)) && ((REQUEST_LIMIT * 4) > requestCounter)){
+            return apiKey4;
+        } else {
+            return apiKey5;
+        }
+    }
+    private void incrementRequestCounter() {
+        requestCounter++;
+        if (requestCounter >= 5 * REQUEST_LIMIT) {
+            requestCounter = 0;
+        }
+    }
+
+    public String updatePlayersLeague(Long year, Long leagueId) throws JSONException, IOException, InterruptedException {
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("https://api-football-beta.p.rapidapi.com/teams?league=" + leagueId + "&season=" + year))
+                .header("X-RapidAPI-Key", getApiKey())
+                .header("X-RapidAPI-Host", "api-football-beta.p.rapidapi.com")
+                .method("GET", HttpRequest.BodyPublishers.noBody())
+                .build();
+        HttpResponse<String> response = HttpClient.newHttpClient().send(request, HttpResponse.BodyHandlers.ofString());
+        String responseBody = response.body();
+        incrementRequestCounter();
+        JSONObject jResponse = new JSONObject(responseBody);
+        StringBuilder sb = new StringBuilder();
+        if (jResponse.has("response")) {
+            JSONArray teams = jResponse.getJSONArray("response");
+            for (int i = 0; i < teams.length(); i++) {
+            JSONObject team = teams.getJSONObject(i);
+            long teamId = team.getJSONObject("team").getLong("id");
+                sb.append(updatePlayerStats(teamId, year, leagueId));
+            }
+        }
+        return sb.toString();
+    }
 
     public String updatePlayerStats(Long teamId, Long season, Long leagueId) throws IOException, InterruptedException, JSONException {
         StringBuilder all = new StringBuilder();
@@ -46,7 +100,7 @@ public class PlayerStatsService {
         while (hasNextPage) {
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create("https://api-football-beta.p.rapidapi.com/players?season=" + season + "&league=" + leagueId +"&team=" + teamId + "&page=" + page))
-                    .header("X-RapidAPI-Key", "d33e623437msha2a56a1ea6f5bfbp18d606jsndd5dc6ff099b")
+                    .header("X-RapidAPI-Key", getApiKey())
                     .header("X-RapidAPI-Host", "api-football-beta.p.rapidapi.com")
                     .method("GET", HttpRequest.BodyPublishers.noBody())
                     .build();
@@ -54,6 +108,7 @@ public class PlayerStatsService {
             HttpResponse<String> response = HttpClient.newHttpClient().send(request, HttpResponse.BodyHandlers.ofString());
             String responseBody = response.body();
             all.append(responseBody);
+            incrementRequestCounter();
             JSONObject jsonResponse = new JSONObject(responseBody);
             if (jsonResponse.has("response")) {
                 JSONArray statsArray = jsonResponse.getJSONArray("response");
@@ -63,14 +118,14 @@ public class PlayerStatsService {
                     if (isActive == 0) continue;
 
                     Long playerId = playerStats.getJSONObject("player").getLong("id");
-                    Optional<PlayerStats> optional = statystykiZawodnikaRepository.getPlayerStatsByPlayerIdAndTeamStatsAndSeason(playerId, teamStats, (long) season);
+                    Optional<PlayerStats> optional = statystykiZawodnikaRepository.getPlayerStatsByPlayerIdAndTeamStatsAndSeason(playerId, teamStats, season);
 
                     if (optional.isPresent()) {
                         PlayerStats toUpdate = optional.get();
                         statystykiZawodnikaRepository.delete(toUpdate);
                     }
 
-                    Optional<PlayerStats> moreMinuteOptionalPlayer = statystykiZawodnikaRepository.getStatystykiZawodnikaByPlayerIdAndSeason(playerId, (long) season);
+                    Optional<PlayerStats> moreMinuteOptionalPlayer = statystykiZawodnikaRepository.getStatystykiZawodnikaByPlayerIdAndSeason(playerId, season);
                     if (moreMinuteOptionalPlayer.isPresent()) {
                         PlayerStats playerX = moreMinuteOptionalPlayer.get();
                         if (playerX.getMinuty() < (float) isActive) {
@@ -139,7 +194,8 @@ public class PlayerStatsService {
                     statystykiZawodnikaRepository.save(player);
                 }
 
-                hasNextPage = jsonResponse.has("paging") && jsonResponse.getJSONObject("paging").getBoolean("next");
+                hasNextPage = (jsonResponse.has("paging"))
+                        && (jsonResponse.getJSONObject("paging").getInt("current") < jsonResponse.getJSONObject("paging").getInt("total"));
                 if (hasNextPage) page++;
             }
         }
@@ -424,5 +480,4 @@ public class PlayerStatsService {
     public void deletePlayer(Long id) {
         playersStatsRepo.deleteById(id);
     }
-
 }
