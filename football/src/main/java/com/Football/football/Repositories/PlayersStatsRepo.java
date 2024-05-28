@@ -11,7 +11,7 @@ import java.util.Optional;
 public interface PlayersStatsRepo extends CrudRepository<PlayerStats, Long> {
 
     Optional<PlayerStats> getPlayerStatsByPlayerIdAndTeamStatsAndSeason(Long id, TeamStats teamId, Long season);
-    Optional<PlayerStats> getStatystykiZawodnikaByPlayerIdAndSeason(Long id, Long season);
+    Optional<PlayerStats> getPlayerStatsByPlayerIdAndSeason(Long id, Long season);
 
     Iterable<PlayerStats> getStatystykiZawodnikasByPozycja(String pos);
 

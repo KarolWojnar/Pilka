@@ -11,4 +11,5 @@ public interface TeamStatsRepo extends CrudRepository<TeamStats, Long> {
     Optional<TeamStats> findFirstByTeamId(Long id);
     @Query("SELECT s FROM TeamStats s GROUP BY s.teamName")
     Iterable<TeamStats> getDistinctTeams();
+    Optional<TeamStats> findTeamStatsByTeamIdAndSeason(long teamId, long year);
 }

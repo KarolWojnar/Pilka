@@ -1,7 +1,6 @@
 package com.Football.football.Tables;
 
 import jakarta.persistence.*;
-import lombok.Data;
 import lombok.Getter;
 import lombok.Setter;
 
