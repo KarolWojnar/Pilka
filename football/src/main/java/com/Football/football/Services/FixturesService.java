@@ -21,6 +21,8 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Optional;
 
 @Service
@@ -40,7 +42,6 @@ public class FixturesService {
                 .build();
         HttpResponse<String> response = HttpClient.newHttpClient().send(request, HttpResponse.BodyHandlers.ofString());
         String rBody = response.body();
-        System.out.println(rBody);
         apiKeyManager.incrementRequestCounter();
         JSONObject jResponse = new JSONObject(rBody);
         if (jResponse.has("response")) {
@@ -60,32 +61,95 @@ public class FixturesService {
             return;
         }
 
-        LocalDateTime date = LocalDateTime.parse(fixture.getJSONObject("fixture").getString("date"));
+        String dateString = fixture.getJSONObject("fixture").getString("date").substring(0, 19);
+        LocalDateTime date = LocalDateTime.parse(dateString, DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+
         JSONArray fixturePlayers = getFixtureStatsFromAPI(fixtureId);
         JSONObject team0 = fixturePlayers.getJSONObject(0);
-        long teamId = team0.getJSONObject("team").getLong("id");
-        Optional<TeamStats> opTeam = teamStatsRepo.findTeamStatsByTeamIdAndSeason(teamId, year);
-        if (opTeam.isPresent()) {
-            JSONArray players = team0.getJSONArray("players");
+        JSONObject team1 = fixturePlayers.getJSONObject(1);
+        long team0Id = team0.getJSONObject("team").getLong("id");
+        long team1Id = team1.getJSONObject("team").getLong("id");
+        Optional<TeamStats> opTeam0 = teamStatsRepo.findTeamStatsByTeamIdAndSeason(team0Id, year);
+        Optional<TeamStats> opTeam1 = teamStatsRepo.findTeamStatsByTeamIdAndSeason(team1Id, year);
+        if (opTeam0.isPresent() && opTeam1.isPresent()) {
+            JSONArray players0 = team0.getJSONArray("players");
 
-            for (int i = 0; i < players.length(); i++) {
-                JSONObject player = players.getJSONObject(i);
-                long playerId = player.getJSONObject("player").getLong("id");
+            for (int i = 0; i < players0.length(); i++) {
+                JSONObject resp = players0.getJSONObject(i);
+                long playerId = resp.getJSONObject("player").getLong("id");
                 Optional<PlayerStats> optionalPlayer = playersStatsRepo
                         .getPlayerStatsByPlayerIdAndSeason(playerId, year);
                 if (optionalPlayer.isPresent()) {
-                    FixturesStats fixturePlayer = new FixturesStats();
+                    JSONObject ps = resp.getJSONArray("statistics").getJSONObject(0);
+                    savePlayerFixtureStats(fixtureId, date, opTeam0.get(), optionalPlayer.get(), opTeam1.get(), ps, resp);
+                }
+            }
 
-                    fixturePlayer.setFixtureId(fixtureId);
-                    fixturePlayer.setFixtureDate(date);
-                    fixturePlayer.setTeamStats(opTeam.get());
-                    fixturePlayer.setPlayerStats(optionalPlayer.get());
-                    //TODO: DOKONCZ
+            JSONArray players1 = team1.getJSONArray("players");
+
+            for (int i = 0; i < players1.length(); i++) {
+                JSONObject resp = players1.getJSONObject(i);
+                long playerId = resp.getJSONObject("player").getLong("id");
+                Optional<PlayerStats> optionalPlayer = playersStatsRepo
+                        .getPlayerStatsByPlayerIdAndSeason(playerId, year);
+                if (optionalPlayer.isPresent()) {
+                    JSONObject ps = resp.getJSONArray("statistics").getJSONObject(0);
+                    savePlayerFixtureStats(fixtureId, date, opTeam1.get(), optionalPlayer.get(), opTeam0.get(), ps, resp);
                 }
 
             }
         }
 
+    }
+
+    private void savePlayerFixtureStats(int fixtureId, LocalDateTime date, TeamStats opTeam0, PlayerStats optionalPlayer, TeamStats opTeam1, JSONObject ps, JSONObject resp) throws JSONException {
+        FixturesStats fixturePlayer = new FixturesStats();
+
+        fixturePlayer.setFixtureId(fixtureId);
+        fixturePlayer.setFixtureDate(date);
+        fixturePlayer.setTeamStats(opTeam0);
+        fixturePlayer.setPlayerStats(optionalPlayer);
+        fixturePlayer.setEnemyStats(opTeam1);
+        String accuracy = ps.getJSONObject("passes").getString("accuracy");
+        Long accuracyPasses = 0L;
+        if (accuracy != null && !accuracy.equals("null")) {
+            accuracyPasses = Long.valueOf(accuracy.replace("%", ""));
+        }
+        fixturePlayer.setAccuracyPasses(accuracyPasses);
+        fixturePlayer.setAsists(ps.getJSONObject("goals").optInt("assists"));
+        fixturePlayer.setBlocks(ps.getJSONObject("tackles").optLong("blocks"));
+        fixturePlayer.setDribbles(ps.getJSONObject("dribbles").optLong("attempts"));
+        fixturePlayer.setDribblesWon(ps.getJSONObject("dribbles").optLong("success"));
+        fixturePlayer.setDuels(ps.getJSONObject("duels").optLong("total"));
+        fixturePlayer.setDuelsWon(ps.getJSONObject("duels").optLong("won"));
+        fixturePlayer.setFoulsCommited(ps.getJSONObject("fouls").optLong("committed"));
+        fixturePlayer.setFoulsDrawn(ps.getJSONObject("fouls").optLong("drawn"));
+        fixturePlayer.setGoals(ps.getJSONObject("goals").optInt("total"));
+        fixturePlayer.setGoalsConceded(ps.getJSONObject("goals").optInt("conceded"));
+        fixturePlayer.setInterceptions(ps.getJSONObject("tackles").optLong("interceptions"));
+        fixturePlayer.setKeyPasses(ps.getJSONObject("passes").optInt("key"));
+        fixturePlayer.setMinutes(ps.getJSONObject("games").optInt("minutes"));
+        fixturePlayer.setName(resp.getJSONObject("player").optString("name"));
+        fixturePlayer.setOffside(ps.optInt("offsides"));
+        fixturePlayer.setPasses(ps.getJSONObject("passes").optInt("total"));
+        fixturePlayer.setPenaltyCommited(ps.getJSONObject("penalty").optInt("commited"));
+        fixturePlayer.setPenaltySaves(ps.getJSONObject("penalty").optInt("saved"));
+        fixturePlayer.setPenaltyWon(ps.getJSONObject("penalty").optInt("won"));
+        fixturePlayer.setPenaltyMissed(ps.getJSONObject("penalty").optInt("missed"));
+        fixturePlayer.setPenaltyScored(ps.getJSONObject("penalty").optInt("scored"));
+        fixturePlayer.setPosition(ps.getJSONObject("games").optString("position"));
+        Double rating = ps.getJSONObject("games").optDouble("rating");
+        if (!Double.isNaN(rating)) {
+            fixturePlayer.setRating(rating);
+        } else {
+            fixturePlayer.setRating(0);
+        }
+        fixturePlayer.setRedCards(ps.getJSONObject("cards").optInt("red"));
+        fixturePlayer.setShots(ps.getJSONObject("shots").optInt("total"));
+        fixturePlayer.setShotsOnGoal(ps.getJSONObject("shots").optInt("on"));
+        fixturePlayer.setTotalTackles(ps.getJSONObject("tackles").optInt("total"));
+        fixturePlayer.setYellowCards(ps.getJSONObject("cards").optInt("yellow"));
+        fixtureRepository.save(fixturePlayer);
     }
 
     private JSONArray getFixtureStatsFromAPI(long fixtureId) throws IOException, InterruptedException, JSONException {
@@ -96,7 +160,6 @@ public class FixturesService {
                 .method("GET", HttpRequest.BodyPublishers.noBody())
                 .build();
         HttpResponse<String> response = HttpClient.newHttpClient().send(request, HttpResponse.BodyHandlers.ofString());
-        System.out.println(response.body());
         apiKeyManager.incrementRequestCounter();
         JSONObject fixturePlayers = new JSONObject(response.body());
         if (fixturePlayers.has("response")) {
@@ -120,5 +183,18 @@ public class FixturesService {
 
     public void saveFixture(FixturesStats fixture) {
         // TODO: Dodanie jednego spotkania
+    }
+
+    public void fixPlayers() {
+        Iterable<PlayerStats> allFrom2022 = playersStatsRepo.findPlayerStatsBySeason(2022);
+        for (PlayerStats player : allFrom2022) {
+            long teamId = player.getTeamStats().getTeamId();
+            Optional<TeamStats> team = teamStatsRepo.findTeamStatsByTeamIdAndSeason(teamId, 2022);
+            if (team.isPresent()) {
+                player.setTeamStats(team.get());
+                playersStatsRepo.save(player);
+            }
+
+        }
     }
 }

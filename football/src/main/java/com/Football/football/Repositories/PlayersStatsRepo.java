@@ -19,4 +19,5 @@ public interface PlayersStatsRepo extends CrudRepository<PlayerStats, Long> {
     List<Object[]> getDistinctBySeasonAndTeamStats();
 
     Iterable<PlayerStats> findPlayerStatsByTeamStats(TeamStats team);
+    Iterable<PlayerStats> findPlayerStatsBySeason(long season);
 }
