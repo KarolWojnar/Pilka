@@ -21,7 +21,7 @@ public class ApiKeyManager {
     @Value("${api.key7}")
     private String apiKey7;
     private int requestCounter = 0;
-    private static final int REQUEST_LIMIT = 100;
+    private static final int REQUEST_LIMIT = 90;
 
     public synchronized String getApiKey() {
         if (requestCounter < REQUEST_LIMIT) {
