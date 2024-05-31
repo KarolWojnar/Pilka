@@ -5,7 +5,6 @@ import org.springframework.stereotype.Component;
 
 @Component
 public class ApiKeyManager {
-
     @Value("${api.key}")
     private String apiKey;
     @Value("${api.key2}")
@@ -22,7 +21,7 @@ public class ApiKeyManager {
     private String apiKey7;
     @Value("${api.key8}")
     private String apiKey8;
-    @Value("${api.ke9}")
+    @Value("${api.key9}")
     private String apiKey9;
     @Value("${api.key10}")
     private String apiKey10;
@@ -46,6 +45,11 @@ public class ApiKeyManager {
     private String apiKey19;
     @Value("${api.key20}")
     private String apiKey20;
+
+    public void setRequestCounter(int requestCounter) {
+        this.requestCounter = requestCounter;
+    }
+
     private int requestCounter = 0;
     private static final int REQUEST_LIMIT = 95;
 
@@ -96,7 +100,7 @@ public class ApiKeyManager {
     public synchronized void incrementRequestCounter() {
         requestCounter++;
         System.out.println(requestCounter);
-        if (requestCounter >= 7 * REQUEST_LIMIT) {
+        if (requestCounter >= 20 * REQUEST_LIMIT) {
             requestCounter = 0;
         }
     }

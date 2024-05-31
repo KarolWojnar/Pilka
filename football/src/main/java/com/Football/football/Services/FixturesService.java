@@ -32,8 +32,13 @@ public class FixturesService {
     private final ApiKeyManager apiKeyManager;
     private final TeamStatsRepo teamStatsRepo;
     private final PlayersStatsRepo playersStatsRepo;
+    private int lap = 0;
 
     public void saveAllFixtures(Long leagueId, Long year) throws IOException, InterruptedException, JSONException {
+        if (lap == 0) {
+            apiKeyManager.setRequestCounter(1100);
+            lap++;
+        }
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create("https://api-football-beta.p.rapidapi.com/fixtures?season=" + year + "&league=" + leagueId))
                 .header("X-RapidAPI-Key", apiKeyManager.getApiKey())
