@@ -32,64 +32,85 @@ public class PlayerStatsService {
     private final ApiKeyManager apiKeyManager;
 
     public String updatePlayersLeague(Long year, Long leagueId) throws JSONException, IOException, InterruptedException {
-        HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create("https://api-football-beta.p.rapidapi.com/teams?league=" + leagueId + "&season=" + year))
-                .header("X-RapidAPI-Key", apiKeyManager.getApiKey())
-                .header("X-RapidAPI-Host", "api-football-beta.p.rapidapi.com")
-                .method("GET", HttpRequest.BodyPublishers.noBody())
-                .build();
-        HttpResponse<String> response = HttpClient.newHttpClient().send(request, HttpResponse.BodyHandlers.ofString());
-        String responseBody = response.body();
-        apiKeyManager.incrementRequestCounter();
-        JSONObject jResponse = new JSONObject(responseBody);
-        StringBuilder sb = new StringBuilder();
-        if (jResponse.has("response")) {
-            JSONArray teams = jResponse.getJSONArray("response");
-            for (int i = 0; i < teams.length(); i++) {
-            JSONObject team = teams.getJSONObject(i);
-            long teamId = team.getJSONObject("team").getLong("id");
-                sb.append(updatePlayerStats(teamId, year, leagueId));
+        int attempts = 0;
+        while (attempts < apiKeyManager.getApiKeysLength()) {
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create("https://api-football-beta.p.rapidapi.com/teams?league=" + leagueId + "&season=" + year))
+                    .header("X-RapidAPI-Key", apiKeyManager.getApiKey())
+                    .header("X-RapidAPI-Host", "api-football-beta.p.rapidapi.com")
+                    .method("GET", HttpRequest.BodyPublishers.noBody())
+                    .build();
+            HttpResponse<String> response = HttpClient.newHttpClient().send(request, HttpResponse.BodyHandlers.ofString());
+
+            if (response.statusCode() == 429) {
+                apiKeyManager.switchToNextApiKey();
+                attempts++;
+            } else if (response.statusCode() == 200) {
+                String responseBody = response.body();
+                JSONObject jResponse = new JSONObject(responseBody);
+                StringBuilder sb = new StringBuilder();
+                if (jResponse.has("response")) {
+                    JSONArray teams = jResponse.getJSONArray("response");
+                    for (int i = 0; i < teams.length(); i++) {
+                        JSONObject team = teams.getJSONObject(i);
+                        long teamId = team.getJSONObject("team").getLong("id");
+                        sb.append(updatePlayerStats(teamId, year, leagueId));
+                    }
+                }
+                return sb.toString();
+            } else {
+                throw new IOException("Unexpected response status: " + response.statusCode());
             }
         }
-        return sb.toString();
+        throw new IOException("Failed to retrieve data from API after trying all API keys.");
     }
 
     public String updatePlayerStats(Long teamId, Long season, Long leagueId) throws IOException, InterruptedException, JSONException {
         StringBuilder all = new StringBuilder();
         Optional<TeamStats> opTeam = teamStatsRepository.findTeamStatsByTeamIdAndSeason(teamId, season);
-
-        if (!opTeam.isPresent()) {
+        if (opTeam.isEmpty()) {
             throw new IllegalArgumentException("Team with ID " + teamId + " not found");
         }
-
         TeamStats teamStats = opTeam.get();
 
         int page = 1;
         boolean hasNextPage = true;
 
         while (hasNextPage) {
-            HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create("https://api-football-beta.p.rapidapi.com/players?season=" + season + "&league=" + leagueId +"&team=" + teamId + "&page=" + page))
-                    .header("X-RapidAPI-Key", apiKeyManager.getApiKey())
-                    .header("X-RapidAPI-Host", "api-football-beta.p.rapidapi.com")
-                    .method("GET", HttpRequest.BodyPublishers.noBody())
-                    .build();
+            int attempts = 0;
+            while (attempts < apiKeyManager.getApiKeysLength()) {
+                HttpRequest request = HttpRequest.newBuilder()
+                        .uri(URI.create("https://api-football-beta.p.rapidapi.com/players?season=" + season + "&league=" + leagueId + "&team=" + teamId + "&page=" + page))
+                        .header("X-RapidAPI-Key", apiKeyManager.getApiKey())
+                        .header("X-RapidAPI-Host", "api-football-beta.p.rapidapi.com")
+                        .method("GET", HttpRequest.BodyPublishers.noBody())
+                        .build();
+                HttpResponse<String> response = HttpClient.newHttpClient().send(request, HttpResponse.BodyHandlers.ofString());
+                if (response.statusCode() == 429) {
+                    apiKeyManager.switchToNextApiKey();
+                    attempts++;
+                } else if (response.statusCode() == 200) {
+                    String responseBody = response.body();
+                    all.append(responseBody);
+                    JSONObject jsonResponse = new JSONObject(responseBody);
+                    if (jsonResponse.has("response")) {
+                        JSONArray statsArray = jsonResponse.getJSONArray("response");
+                        for (int i = 0; i < statsArray.length(); i++) {
+                            JSONObject playerStats = statsArray.getJSONObject(i);
+                            savePlayer(season, playerStats, teamStats);
+                        }
 
-            HttpResponse<String> response = HttpClient.newHttpClient().send(request, HttpResponse.BodyHandlers.ofString());
-            String responseBody = response.body();
-            all.append(responseBody);
-            apiKeyManager.incrementRequestCounter();
-            JSONObject jsonResponse = new JSONObject(responseBody);
-            if (jsonResponse.has("response")) {
-                JSONArray statsArray = jsonResponse.getJSONArray("response");
-                for (int i = 0; i < statsArray.length(); i++) {
-                    JSONObject playerStats = statsArray.getJSONObject(i);
-                    savePlayer(season, playerStats, teamStats);
+                        hasNextPage = (jsonResponse.has("paging"))
+                                && (jsonResponse.getJSONObject("paging").getInt("current") < jsonResponse.getJSONObject("paging").getInt("total"));
+                        if (hasNextPage) page++;
+                    }
+                    break;
+                } else {
+                    throw new IOException("Unexpected response status: " + response.statusCode());
                 }
-
-                hasNextPage = (jsonResponse.has("paging"))
-                        && (jsonResponse.getJSONObject("paging").getInt("current") < jsonResponse.getJSONObject("paging").getInt("total"));
-                if (hasNextPage) page++;
+            }
+            if (attempts == apiKeyManager.getApiKeysLength()) {
+                throw new IOException("Failed to retrieve data from API after trying all API keys.");
             }
         }
         return all.toString();

@@ -20,8 +20,6 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.time.LocalDateTime;
-import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Optional;
 
@@ -32,31 +30,44 @@ public class FixturesService {
     private final ApiKeyManager apiKeyManager;
     private final TeamStatsRepo teamStatsRepo;
     private final PlayersStatsRepo playersStatsRepo;
-    private int lap = 0;
+    private HttpClient httpClient = HttpClient.newHttpClient();
 
     public void saveAllFixtures(Long leagueId, Long year) throws IOException, InterruptedException, JSONException {
-        if (lap == 0) {
-            apiKeyManager.setRequestCounter(1100);
-            lap++;
-        }
-        HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create("https://api-football-beta.p.rapidapi.com/fixtures?season=" + year + "&league=" + leagueId))
-                .header("X-RapidAPI-Key", apiKeyManager.getApiKey())
-                .header("X-RapidAPI-Host", "api-football-beta.p.rapidapi.com")
-                .method("GET", HttpRequest.BodyPublishers.noBody())
-                .build();
-        HttpResponse<String> response = HttpClient.newHttpClient().send(request, HttpResponse.BodyHandlers.ofString());
-        String rBody = response.body();
-        apiKeyManager.incrementRequestCounter();
-        JSONObject jResponse = new JSONObject(rBody);
-        if (jResponse.has("response")) {
-            JSONArray fixtures = jResponse.getJSONArray("response");
-            for (int i = 0; i < fixtures.length(); i++) {
-                JSONObject fixture = fixtures.getJSONObject(i);
-                saveNewFixture(fixture, year);
+        int attempts = 0;
+
+        while (attempts < apiKeyManager.getApiKeysLength()) {
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create("https://api-football-beta.p.rapidapi.com/fixtures?season=" + year + "&league=" + leagueId))
+                    .header("X-RapidAPI-Key", apiKeyManager.getApiKey())
+                    .header("X-RapidAPI-Host", "api-football-beta.p.rapidapi.com")
+                    .method("GET", HttpRequest.BodyPublishers.noBody())
+                    .build();
+
+            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+
+            if (response.statusCode() == 429) {
+                apiKeyManager.switchToNextApiKey();
+                attempts++;
+            } else if (response.statusCode() == 200) {
+                String rBody = response.body();
+                JSONObject jResponse = new JSONObject(rBody);
+
+                if (jResponse.has("response")) {
+                    JSONArray fixtures = jResponse.getJSONArray("response");
+                    for (int i = 0; i < fixtures.length(); i++) {
+                        JSONObject fixture = fixtures.getJSONObject(i);
+                        saveNewFixture(fixture, year);
+                    }
+                    return;
+                } else {
+                    throw new IOException("Brak spotkania o takim id");
+                }
+            } else {
+                throw new IOException("Unexpected response status: " + response.statusCode());
             }
         }
 
+        throw new IOException("Failed to retrieve data from API after trying all API keys.");
     }
 
     private void saveNewFixture(JSONObject fixture, Long year) throws JSONException, IOException, InterruptedException {
@@ -116,9 +127,9 @@ public class FixturesService {
         fixturePlayer.setPlayerStats(optionalPlayer);
         fixturePlayer.setEnemyStats(opTeam1);
         String accuracy = ps.getJSONObject("passes").getString("accuracy");
-        Long accuracyPasses = 0L;
+        long accuracyPasses = 0L;
         if (accuracy != null && !accuracy.equals("null")) {
-            accuracyPasses = Long.valueOf(accuracy.replace("%", ""));
+            accuracyPasses = Long.parseLong(accuracy.replace("%", ""));
         }
         fixturePlayer.setAccuracyPasses(accuracyPasses);
         fixturePlayer.setAsists(ps.getJSONObject("goals").optInt("assists"));
@@ -157,21 +168,39 @@ public class FixturesService {
         fixtureRepository.save(fixturePlayer);
     }
 
-    private JSONArray getFixtureStatsFromAPI(long fixtureId) throws IOException, InterruptedException, JSONException {
-        HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create("https://api-football-beta.p.rapidapi.com/fixtures/players?fixture=" + fixtureId))
-                .header("X-RapidAPI-Key", apiKeyManager.getApiKey())
-                .header("X-RapidAPI-Host", "api-football-beta.p.rapidapi.com")
-                .method("GET", HttpRequest.BodyPublishers.noBody())
-                .build();
-        HttpResponse<String> response = HttpClient.newHttpClient().send(request, HttpResponse.BodyHandlers.ofString());
-        apiKeyManager.incrementRequestCounter();
-        JSONObject fixturePlayers = new JSONObject(response.body());
-        if (fixturePlayers.has("response")) {
-            return fixturePlayers.getJSONArray("response");
-        } else {
-            throw new IOException("Brak spotkania o takim id");
+    public JSONArray getFixtureStatsFromAPI(long fixtureId) throws IOException, InterruptedException, JSONException {
+        JSONArray responseArray = null;
+        int attempts = 0;
+
+        while (attempts < apiKeyManager.getApiKeysLength()) {
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create("https://api-football-beta.p.rapidapi.com/fixtures/players?fixture=" + fixtureId))
+                    .header("X-RapidAPI-Key", apiKeyManager.getApiKey())
+                    .header("X-RapidAPI-Host", "api-football-beta.p.rapidapi.com")
+                    .method("GET", HttpRequest.BodyPublishers.noBody())
+                    .build();
+
+            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+
+            if (response.statusCode() == 429) { // 429 Too Many Requests
+                apiKeyManager.switchToNextApiKey();
+                attempts++;
+            } else if (response.statusCode() == 200) {
+                JSONObject fixturePlayers = new JSONObject(response.body());
+                if (fixturePlayers.has("response")) {
+                    responseArray = fixturePlayers.getJSONArray("response");
+                    break;
+                } else {
+                    throw new IOException("Brak spotkania o takim id");
+                }
+            } else {
+                throw new IOException("Unexpected response status: " + response.statusCode());
+            }
         }
+        if (responseArray == null) {
+            throw new IOException("Failed to retrieve data from API after trying all API keys.");
+        }
+        return responseArray;
     }
 
     public void updateMatch(Long id) {

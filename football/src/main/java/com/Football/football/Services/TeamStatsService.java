@@ -29,147 +29,196 @@ public class TeamStatsService {
     private final LeaguesRepository leaguesRepository;
     private final ApiKeyManager apiKeyManager;
 
-    public void getAllTeamsByLeague(long leagueId, Long season) throws IOException, InterruptedException, JSONException {
-        HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create("https://api-football-beta.p.rapidapi.com/teams?league=" + leagueId + "&season=" + season))
-                .header("X-RapidAPI-Key", apiKeyManager.getApiKey())
-                .header("X-RapidAPI-Host", "api-football-beta.p.rapidapi.com")
-                .method("GET", HttpRequest.BodyPublishers.noBody())
-                .build();
-        HttpResponse<String> response = HttpClient.newHttpClient().send(request, HttpResponse.BodyHandlers.ofString());
-        String responseBody = response.body();
-        apiKeyManager.incrementRequestCounter();
-        JSONObject jResponse = new JSONObject(responseBody);
+    private HttpClient httpClient = HttpClient.newHttpClient();
 
-        if (jResponse.has("response")) {
-            getLeagueById(leagueId);
-            JSONArray teams = jResponse.getJSONArray("response");
-            for (int i = 0; i < teams.length(); i++) {
-                JSONObject team = teams.getJSONObject(i);
-                long teamId = team.getJSONObject("team").getLong("id");
-                updateTeamStats(teamId, season, leagueId);
+    public void getAllTeamsByLeague(long leagueId, Long season) throws IOException, InterruptedException, JSONException {
+        int attempts = 0;
+        while (attempts < apiKeyManager.getApiKeysLength()) {
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create("https://api-football-beta.p.rapidapi.com/teams?league=" + leagueId + "&season=" + season))
+                    .header("X-RapidAPI-Key", apiKeyManager.getApiKey())
+                    .header("X-RapidAPI-Host", "api-football-beta.p.rapidapi.com")
+                    .method("GET", HttpRequest.BodyPublishers.noBody())
+                    .build();
+
+            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+
+            if (response.statusCode() == 429) {
+                apiKeyManager.switchToNextApiKey();
+                attempts++;
+            } else if (response.statusCode() == 200) {
+                String responseBody = response.body();
+                JSONObject jResponse = new JSONObject(responseBody);
+
+                if (jResponse.has("response")) {
+                    getLeagueById(leagueId);
+                    JSONArray teams = jResponse.getJSONArray("response");
+                    for (int i = 0; i < teams.length(); i++) {
+                        JSONObject team = teams.getJSONObject(i);
+                        long teamId = team.getJSONObject("team").getLong("id");
+                        updateTeamStats(teamId, season, leagueId);
+                    }
+                    return;
+                } else {
+                    throw new IOException("Brak drużyn w odpowiedzi API.");
+                }
+            } else {
+                throw new IOException("Unexpected response status: " + response.statusCode());
             }
         }
+        throw new IOException("Failed to retrieve data from API after trying all API keys.");
     }
 
     private void getLeagueById(Long leagueId) throws IOException, InterruptedException, JSONException {
         Optional<Leagues> optionalLeague = leaguesRepository.getFirstByLeagueId(leagueId);
         if (optionalLeague.isEmpty()) {
-            HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create("https://api-football-beta.p.rapidapi.com/leagues?id=" + leagueId))
-                    .header("X-RapidAPI-Key", apiKeyManager.getApiKey())
-                    .header("X-RapidAPI-Host", "api-football-beta.p.rapidapi.com")
-                    .method("GET", HttpRequest.BodyPublishers.noBody())
-                    .build();
-            HttpResponse<String> response = HttpClient.newHttpClient().send(request, HttpResponse.BodyHandlers.ofString());
-            String responseBody = response.body();
-            apiKeyManager.incrementRequestCounter();
-            JSONObject jsonResponse = new JSONObject(responseBody);
+            int attempts = 0;
+            while (attempts < apiKeyManager.getApiKeysLength()) {
+                HttpRequest request = HttpRequest.newBuilder()
+                        .uri(URI.create("https://api-football-beta.p.rapidapi.com/leagues?id=" + leagueId))
+                        .header("X-RapidAPI-Key", apiKeyManager.getApiKey())
+                        .header("X-RapidAPI-Host", "api-football-beta.p.rapidapi.com")
+                        .method("GET", HttpRequest.BodyPublishers.noBody())
+                        .build();
 
-            if (jsonResponse.has("response")) {
-                JSONObject leagueObject = jsonResponse.getJSONArray("response").getJSONObject(0);
-                Leagues league = new Leagues();
-                league.setLeagueId(leagueId);
-                league.setLeagueName(leagueObject.getJSONObject("league").getString("name"));
-                league.setCountry(leagueObject.getJSONObject("country").getString("name"));
-                leaguesRepository.save(league);
+                HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+
+                if (response.statusCode() == 429) {
+                    apiKeyManager.switchToNextApiKey();
+                    attempts++;
+                } else if (response.statusCode() == 200) {
+                    String responseBody = response.body();
+                    JSONObject jsonResponse = new JSONObject(responseBody);
+
+                    if (jsonResponse.has("response")) {
+                        JSONObject leagueObject = jsonResponse.getJSONArray("response").getJSONObject(0);
+                        Leagues league = new Leagues();
+                        league.setLeagueId(leagueId);
+                        league.setLeagueName(leagueObject.getJSONObject("league").getString("name"));
+                        league.setCountry(leagueObject.getJSONObject("country").getString("name"));
+                        leaguesRepository.save(league);
+                        return;
+                    } else {
+                        throw new IOException("Brak ligi w odpowiedzi API.");
+                    }
+                } else {
+                    throw new IOException("Unexpected response status: " + response.statusCode());
+                }
             }
+            throw new IOException("Failed to retrieve data from API after trying all API keys.");
         }
     }
 
     public void updateTeamStats(long teamId, Long year, long leagueId) throws IOException, InterruptedException, JSONException {
-        HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create("https://api-football-beta.p.rapidapi.com/teams/statistics?league=" + leagueId + "&team=" + teamId +"&season=" + year))
-                .header("X-RapidAPI-Key", apiKeyManager.getApiKey())
-                .header("X-RapidAPI-Host", "api-football-beta.p.rapidapi.com")
-                .method("GET", HttpRequest.BodyPublishers.noBody())
-                .build();
-        HttpResponse<String> response2 = HttpClient.newHttpClient().send(request, HttpResponse.BodyHandlers.ofString());
-        String responseBody = response2.body();
-        apiKeyManager.incrementRequestCounter();
-        JSONObject jsonResponse = new JSONObject(responseBody);
-        if (jsonResponse.has("response")) {
-            JSONObject responseData = jsonResponse.getJSONObject("response");
+        int attempts = 0;
+        while (attempts < apiKeyManager.getApiKeysLength()) {
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create("https://api-football-beta.p.rapidapi.com/teams/statistics?league=" + leagueId + "&team=" + teamId + "&season=" + year))
+                    .header("X-RapidAPI-Key", apiKeyManager.getApiKey())
+                    .header("X-RapidAPI-Host", "api-football-beta.p.rapidapi.com")
+                    .method("GET", HttpRequest.BodyPublishers.noBody())
+                    .build();
 
-            Optional<TeamStats> optional = teamStatsRepository.getStatystykiDruzyniesByTeamIdAndSeason(responseData.getJSONObject("team").getLong("id"), (long) year);
-            if (optional.isPresent()) {
-                TeamStats updateTeam = optional.get();
-                teamStatsRepository.delete(updateTeam);
+            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+
+            if (response.statusCode() == 429) {
+                apiKeyManager.switchToNextApiKey();
+                attempts++;
+            } else if (response.statusCode() == 200) {
+                String responseBody = response.body();
+                JSONObject jsonResponse = new JSONObject(responseBody);
+
+                if (jsonResponse.has("response")) {
+                    JSONObject responseData = jsonResponse.getJSONObject("response");
+
+                    Optional<TeamStats> optional = teamStatsRepository.getStatystykiDruzyniesByTeamIdAndSeason(responseData.getJSONObject("team").getLong("id"), year);
+                    if (optional.isPresent()) {
+                        TeamStats updateTeam = optional.get();
+                        teamStatsRepository.delete(updateTeam);
+                    }
+                    saveTeamStats(teamId, year, leagueId, responseData);
+                    return;
+                } else {
+                    throw new IOException("Brak statystyk drużyny w odpowiedzi API.");
+                }
+            } else {
+                throw new IOException("Unexpected response status: " + response.statusCode());
             }
-            TeamStats teamStats = new TeamStats();
-            teamStats.setTeamName(responseData.getJSONObject("team").getString("name"));
-            teamStats.setTeamId(teamId);
-            teamStats.setSeason(year);
-            Optional<Leagues> league = leaguesRepository.getFirstByLeagueId(leagueId);
-            if (league.isPresent()) {
-                teamStats.setLeagues(league.get());
-            }
-            JSONObject fixtures = responseData.getJSONObject("fixtures");
-            JSONObject played = fixtures.getJSONObject("played");
-            teamStats.setSumaSpotkan(played.optDouble("total", 0));
-            teamStats.setMeczeDomowe(played.optDouble("home", 0));
-            teamStats.setMeczeWyjazdowe(played.optDouble("away", 0));
-
-            JSONObject wins = fixtures.getJSONObject("wins");
-            teamStats.setWygraneWDomu(wins.optDouble("home", 0));
-            teamStats.setWygraneNaWyjezdzie(wins.optDouble("away", 0));
-
-            teamStats.setRemisyWDomu(fixtures.getJSONObject("draws").optDouble("home", 0));
-            teamStats.setRemisyNaWyjezdzie(fixtures.getJSONObject("draws").optDouble("away", 0));
-
-            teamStats.setPrzegraneWDomu(fixtures.getJSONObject("loses").optDouble("home", 0));
-            teamStats.setPrzegraneNaWyjezdzie(fixtures.getJSONObject("loses").optDouble("away", 0));
-
-            JSONObject goals = responseData.getJSONObject("goals");
-            JSONObject goalsFor = goals.getJSONObject("for");
-
-            teamStats.setGoleStrzeloneWDomu(goalsFor.getJSONObject("total").optDouble("home", 0));
-            teamStats.setGoleStrzeloneNaWyjezdzie(goalsFor.getJSONObject("total").optDouble("away", 0));
-
-            teamStats.setSredniaGoliStrzelonychNaWyjezdzie(goalsFor.getJSONObject("average").optDouble("away", 0));
-            teamStats.setSredniaGoliStrzelonychWDomu(goalsFor.getJSONObject("average").optDouble("home", 0));
-
-            JSONObject goalsTotalAgainst = goals.getJSONObject("against").getJSONObject("total");
-            JSONObject goalsAvgAgainst = goals.getJSONObject("against").getJSONObject("average");
-
-            teamStats.setGoleStraconeWDomu(goalsTotalAgainst.optDouble("home", 0));
-            teamStats.setGoleStraconeNaWyjezdzie(goalsTotalAgainst.optDouble("away", 0));
-
-            teamStats.setSredniaGoliStraconychNaWyjezdzie(goalsAvgAgainst.optDouble("away", 0));
-            teamStats.setSredniaGoliStraconychWDomu(goalsAvgAgainst.optDouble("home", 0));
-
-            teamStats.setCzysteKontaWDomu(responseData.getJSONObject("clean_sheet").optDouble("home", 0));
-            teamStats.setCzysteKontaNaWyjezdzie(responseData.getJSONObject("clean_sheet").optDouble("away", 0));
-
-            teamStats.setMeczeBezGolaWDomu(responseData.getJSONObject("failed_to_score").optDouble("home", 0));
-            teamStats.setMeczeBezGolaNaWyjezdzie(responseData.getJSONObject("failed_to_score").optDouble("away", 0));
-
-            teamStats.setKarneStrzelone(responseData.getJSONObject("penalty").getJSONObject("scored").optDouble("total", 0));
-            teamStats.setKarneNiestrzelone(responseData.getJSONObject("penalty").getJSONObject("missed").optDouble("total", 0));
-
-            teamStats.setFormacja(responseData.getJSONArray("lineups").getJSONObject(0).optString("formation"));
-            teamStats.setIleRazyWtejFormacji(responseData.getJSONArray("lineups").getJSONObject(0).optDouble("played", 0));
-
-            JSONObject cardsYellow = responseData.getJSONObject("cards").getJSONObject("yellow");
-
-            double yellow = cardsYellow.getJSONObject("0-15").optDouble("total", 0) + cardsYellow.getJSONObject("16-30").optDouble("total", 0)
-                    + cardsYellow.getJSONObject("31-45").optDouble("total", 0) + cardsYellow.getJSONObject("46-60").optDouble("total", 0)
-                    + cardsYellow.getJSONObject("61-75").optDouble("total", 0) + cardsYellow.getJSONObject("76-90").optDouble("total", 0)
-                    + cardsYellow.getJSONObject("91-105").optDouble("total", 0);
-
-            teamStats.setYellowCards(yellow);
-
-            JSONObject cardsRed = responseData.getJSONObject("cards").getJSONObject("red");
-
-            double red = cardsRed.getJSONObject("0-15").optDouble("total", 0) + cardsRed.getJSONObject("16-30").optDouble("total", 0)
-                    + cardsRed.getJSONObject("31-45").optDouble("total", 0) + cardsRed.getJSONObject("46-60").optDouble("total", 0)
-                    + cardsRed.getJSONObject("61-75").optDouble("total", 0) + cardsRed.getJSONObject("76-90").optDouble("total", 0)
-                    + cardsRed.getJSONObject("91-105").optDouble("total", 0);
-
-            teamStats.setRedCards(red);
-
-            teamStatsRepository.save(teamStats);
         }
+        throw new IOException("Failed to retrieve data from API after trying all API keys.");
+    }
+    private void saveTeamStats(long teamId, Long year, long leagueId, JSONObject responseData) throws JSONException {
+        TeamStats teamStats = new TeamStats();
+        teamStats.setTeamName(responseData.getJSONObject("team").getString("name"));
+        teamStats.setTeamId(teamId);
+        teamStats.setSeason(year);
+        Optional<Leagues> league = leaguesRepository.getFirstByLeagueId(leagueId);
+        league.ifPresent(teamStats::setLeagues);
+        JSONObject fixtures = responseData.getJSONObject("fixtures");
+        JSONObject played = fixtures.getJSONObject("played");
+        teamStats.setSumaSpotkan(played.optDouble("total", 0));
+        teamStats.setMeczeDomowe(played.optDouble("home", 0));
+        teamStats.setMeczeWyjazdowe(played.optDouble("away", 0));
+
+        JSONObject wins = fixtures.getJSONObject("wins");
+        teamStats.setWygraneWDomu(wins.optDouble("home", 0));
+        teamStats.setWygraneNaWyjezdzie(wins.optDouble("away", 0));
+
+        teamStats.setRemisyWDomu(fixtures.getJSONObject("draws").optDouble("home", 0));
+        teamStats.setRemisyNaWyjezdzie(fixtures.getJSONObject("draws").optDouble("away", 0));
+
+        teamStats.setPrzegraneWDomu(fixtures.getJSONObject("loses").optDouble("home", 0));
+        teamStats.setPrzegraneNaWyjezdzie(fixtures.getJSONObject("loses").optDouble("away", 0));
+
+        JSONObject goals = responseData.getJSONObject("goals");
+        JSONObject goalsFor = goals.getJSONObject("for");
+
+        teamStats.setGoleStrzeloneWDomu(goalsFor.getJSONObject("total").optDouble("home", 0));
+        teamStats.setGoleStrzeloneNaWyjezdzie(goalsFor.getJSONObject("total").optDouble("away", 0));
+
+        teamStats.setSredniaGoliStrzelonychNaWyjezdzie(goalsFor.getJSONObject("average").optDouble("away", 0));
+        teamStats.setSredniaGoliStrzelonychWDomu(goalsFor.getJSONObject("average").optDouble("home", 0));
+
+        JSONObject goalsTotalAgainst = goals.getJSONObject("against").getJSONObject("total");
+        JSONObject goalsAvgAgainst = goals.getJSONObject("against").getJSONObject("average");
+
+        teamStats.setGoleStraconeWDomu(goalsTotalAgainst.optDouble("home", 0));
+        teamStats.setGoleStraconeNaWyjezdzie(goalsTotalAgainst.optDouble("away", 0));
+
+        teamStats.setSredniaGoliStraconychNaWyjezdzie(goalsAvgAgainst.optDouble("away", 0));
+        teamStats.setSredniaGoliStraconychWDomu(goalsAvgAgainst.optDouble("home", 0));
+
+        teamStats.setCzysteKontaWDomu(responseData.getJSONObject("clean_sheet").optDouble("home", 0));
+        teamStats.setCzysteKontaNaWyjezdzie(responseData.getJSONObject("clean_sheet").optDouble("away", 0));
+
+        teamStats.setMeczeBezGolaWDomu(responseData.getJSONObject("failed_to_score").optDouble("home", 0));
+        teamStats.setMeczeBezGolaNaWyjezdzie(responseData.getJSONObject("failed_to_score").optDouble("away", 0));
+
+        teamStats.setKarneStrzelone(responseData.getJSONObject("penalty").getJSONObject("scored").optDouble("total", 0));
+        teamStats.setKarneNiestrzelone(responseData.getJSONObject("penalty").getJSONObject("missed").optDouble("total", 0));
+
+        teamStats.setFormacja(responseData.getJSONArray("lineups").getJSONObject(0).optString("formation"));
+        teamStats.setIleRazyWtejFormacji(responseData.getJSONArray("lineups").getJSONObject(0).optDouble("played", 0));
+
+        JSONObject cardsYellow = responseData.getJSONObject("cards").getJSONObject("yellow");
+
+        double yellow = cardsYellow.getJSONObject("0-15").optDouble("total", 0) + cardsYellow.getJSONObject("16-30").optDouble("total", 0)
+                + cardsYellow.getJSONObject("31-45").optDouble("total", 0) + cardsYellow.getJSONObject("46-60").optDouble("total", 0)
+                + cardsYellow.getJSONObject("61-75").optDouble("total", 0) + cardsYellow.getJSONObject("76-90").optDouble("total", 0)
+                + cardsYellow.getJSONObject("91-105").optDouble("total", 0);
+
+        teamStats.setYellowCards(yellow);
+
+        JSONObject cardsRed = responseData.getJSONObject("cards").getJSONObject("red");
+
+        double red = cardsRed.getJSONObject("0-15").optDouble("total", 0) + cardsRed.getJSONObject("16-30").optDouble("total", 0)
+                + cardsRed.getJSONObject("31-45").optDouble("total", 0) + cardsRed.getJSONObject("46-60").optDouble("total", 0)
+                + cardsRed.getJSONObject("61-75").optDouble("total", 0) + cardsRed.getJSONObject("76-90").optDouble("total", 0)
+                + cardsRed.getJSONObject("91-105").optDouble("total", 0);
+
+        teamStats.setRedCards(red);
+
+        teamStatsRepository.save(teamStats);
     }
 
     public void getSumSum() {
