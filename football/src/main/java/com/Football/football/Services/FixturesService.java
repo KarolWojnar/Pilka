@@ -21,7 +21,11 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -182,7 +186,7 @@ public class FixturesService {
 
             HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
 
-            if (response.statusCode() == 429) { // 429 Too Many Requests
+            if (response.statusCode() == 429) {
                 apiKeyManager.switchToNextApiKey();
                 attempts++;
             } else if (response.statusCode() == 200) {
@@ -211,11 +215,49 @@ public class FixturesService {
         // TODO: Implementacja tworzenia spotkania
     }
 
-    public void getFixture(int teamId) {
+    public void getFixturesByTeam(long teamId, long season) {
         // TODO: Pobranie jednego spotkania
     }
 
     public void saveFixture(FixturesStats fixture) {
         // TODO: Dodanie jednego spotkania
+    }
+
+    public List<PlayerStats> getFixturesForTeamAndSeason(long teamId, long season, LocalDateTime startDate, LocalDateTime endDate) {
+        Optional<TeamStats> optionalTeam = teamStatsRepo.findTeamStatsByTeamIdAndSeason(teamId, season);
+        List<PlayerStats> aggregatedPlayersStats = new ArrayList<>();
+
+        if (optionalTeam.isPresent()) {
+            List<FixturesStats> fixtures = fixtureRepository.findByTeamStatsAndFixtureDateBetween(optionalTeam.get(), startDate, endDate);
+
+            Map<Long, List<FixturesStats>> groupedByPlayer = fixtures.stream()
+                    .collect(Collectors.groupingBy(f -> f.getPlayerStats().getPlayerId()));
+
+            groupedByPlayer.forEach((playerId, stats) -> {
+                Optional<PlayerStats> aggregatedPlayerStats = playersStatsRepo.getPlayerStatsByPlayerIdAndSeason(playerId, season);
+                if (aggregatedPlayerStats.isPresent()) {
+                    PlayerStats aggPS = aggregatedPlayerStats.get();
+                    aggPS.setMinuty(stats.stream().mapToDouble(FixturesStats::getMinutes).sum());
+                    aggPS.setStrzaly(stats.stream().mapToDouble(FixturesStats::getShots).sum());
+                    aggPS.setStrzalyCelne(stats.stream().mapToDouble(FixturesStats::getShotsOnGoal).sum());
+                    aggPS.setGole(stats.stream().mapToDouble(FixturesStats::getGoals).sum());
+                    aggPS.setPodania(stats.stream().mapToDouble(FixturesStats::getPasses).sum());
+                    aggPS.setPodaniaKluczowe(stats.stream().mapToDouble(FixturesStats::getKeyPasses).sum());
+                    aggPS.setAsysty(stats.stream().mapToDouble(FixturesStats::getAsists).sum());
+                    aggPS.setPojedynki(stats.stream().mapToDouble(FixturesStats::getDuels).sum());
+                    aggPS.setPojedynkiWygrane(stats.stream().mapToDouble(FixturesStats::getDuelsWon).sum());
+                    aggPS.setProbyPrzechwytu(stats.stream().mapToDouble(FixturesStats::getTotalTackles).sum());
+                    aggPS.setPrzechwytyUdane(stats.stream().mapToDouble(FixturesStats::getInterceptions).sum());
+                    aggPS.setDryblingi(stats.stream().mapToDouble(FixturesStats::getDribbles).sum());
+                    aggPS.setDryblingiWygrane(stats.stream().mapToDouble(FixturesStats::getDribblesWon).sum());
+                    aggPS.setFauleNaZawodniku(stats.stream().mapToDouble(FixturesStats::getFoulsDrawn).sum());
+                    aggPS.setFaulePopelnione(stats.stream().mapToDouble(FixturesStats::getFoulsCommited).sum());
+                    aggPS.setKartkiCzerwone(stats.stream().mapToDouble(FixturesStats::getRedCards).sum());
+                    aggPS.setKartkiZolte(stats.stream().mapToDouble(FixturesStats::getYellowCards).sum());
+                    aggregatedPlayersStats.add(aggPS);
+                }
+            });
+        }
+        return aggregatedPlayersStats;
     }
 }
