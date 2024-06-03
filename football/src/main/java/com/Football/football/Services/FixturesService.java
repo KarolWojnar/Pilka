@@ -218,17 +218,4 @@ public class FixturesService {
     public void saveFixture(FixturesStats fixture) {
         // TODO: Dodanie jednego spotkania
     }
-
-    public void fixPlayers() {
-        Iterable<PlayerStats> allFrom2022 = playersStatsRepo.findPlayerStatsBySeason(2022);
-        for (PlayerStats player : allFrom2022) {
-            long teamId = player.getTeamStats().getTeamId();
-            Optional<TeamStats> team = teamStatsRepo.findTeamStatsByTeamIdAndSeason(teamId, 2022);
-            if (team.isPresent()) {
-                player.setTeamStats(team.get());
-                playersStatsRepo.save(player);
-            }
-
-        }
-    }
 }
