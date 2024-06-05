@@ -251,6 +251,7 @@ public class TeamStatsService {
             avgAllRepository.save(avgTeam);
         }
     }
+
     private TeamAvg getSredniaZeWszystkiegoPos(TeamGroupAvgWPos team, double[] weights, boolean isPos) {
         double summaryWeight = 0.0;
 

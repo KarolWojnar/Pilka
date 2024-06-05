@@ -4,6 +4,7 @@ import com.Football.football.Tables.TeamStats;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.CrudRepository;
 
+import java.util.List;
 import java.util.Optional;
 
 public interface TeamStatsRepo extends CrudRepository<TeamStats, Long> {
@@ -12,4 +13,5 @@ public interface TeamStatsRepo extends CrudRepository<TeamStats, Long> {
     @Query("SELECT s FROM TeamStats s GROUP BY s.teamName")
     Iterable<TeamStats> getDistinctTeams();
     Optional<TeamStats> findTeamStatsByTeamIdAndSeason(long teamId, long year);
+    List<TeamStats> findAllBySeason(long year);
 }

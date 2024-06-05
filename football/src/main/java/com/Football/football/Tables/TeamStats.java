@@ -19,7 +19,7 @@ public class TeamStats {
     private Double sumaSpotkan;
     @Column(name = "Nazwa drużyny")
     private String teamName;
-    @Column(name = "id drużyny")
+    @Column(name = "id_druzyny")
     private long teamId;
     @Column(name = "sezon")
     private Long season;

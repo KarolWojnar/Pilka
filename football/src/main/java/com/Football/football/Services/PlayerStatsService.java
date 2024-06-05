@@ -343,12 +343,11 @@ public class PlayerStatsService {
     }
 
     public void getSummary() {
-        List<Object[]> combinationsTeamsAndSeasons = statystykiZawodnikaRepository.getDistinctBySeasonAndTeamStats();
-        for (Object[] singleCombination : combinationsTeamsAndSeasons) {
-            Long season = (Long) singleCombination[0];
-            Long teamId = (Long) singleCombination[1];
-
-            Optional<TeamStats> teamStatsOp = teamStatsRepository.findFirstByTeamId(teamId);
+        List<PlayerStats> combinationsTeamsAndSeasons = statystykiZawodnikaRepository.getPlayerStatsGroupedBySeasonAndTeamStats();
+        for (PlayerStats singleCombination : combinationsTeamsAndSeasons) {
+            long season = singleCombination.getSeason();
+            long teamId = singleCombination.getTeamStats().getTeamId();
+            Optional<TeamStats> teamStatsOp = teamStatsRepository.findTeamStatsByTeamIdAndSeason(teamId, season);
             if (teamStatsOp.isPresent()) {
                 List<PlayersStatsGroup> players = pogrupowaneRepository.getPogrupowaneStatystykiZawodnikowByTeamStatsAndSeason(teamStatsOp.get(), season);
                 Optional<TeamGroupAvg> optionalSredniaDruzyny = sredniaDruzynyRepository.getSredniaDruzynyByTeamStatsAndSeason(teamStatsOp.get(), season);
@@ -357,7 +356,6 @@ public class PlayerStatsService {
                     sredniaDruzynyRepository.delete(prevTeam);
                 }
                 double sum = 0, avgPodaniaKreatywanosc = 0, avgDryblingSkutecznosc = 0, avgFizycznoscInterakcje = 0, avgObronaKotrolaPrzeciwnika = 0;
-
                 for (PlayersStatsGroup player : players) {
                     sum++;
                     avgFizycznoscInterakcje += player.getFizycznoscInterakcje();
@@ -372,13 +370,10 @@ public class PlayerStatsService {
                 avgPodaniaKreatywanosc /= sum;
 
                 TeamGroupAvg team = new TeamGroupAvg();
-                Optional<TeamStats> optionalTeam = teamStatsRepository.findFirstByTeamId(teamId);
-                if (optionalTeam.isPresent()) {
-                    team.setTeamStats(optionalTeam.get());
-                }
+                Optional<TeamStats> optionalTeam = teamStatsRepository.findTeamStatsByTeamIdAndSeason(teamId, season);
+                optionalTeam.ifPresent(team::setTeamStats);
                 team.setSeason(season);
-                Optional<TeamStats> optionalName = teamStatsRepository.findFirstByTeamId(teamId);
-                optionalName.ifPresent(statystykiDruzyny -> team.setTeamName(statystykiDruzyny.getTeamName()));
+                optionalTeam.ifPresent(statystykiDruzyny -> team.setTeamName(statystykiDruzyny.getTeamName()));
                 team.setDryblingSkutecznosc(avgDryblingSkutecznosc);
                 team.setFizycznoscInterakcje(avgFizycznoscInterakcje);
                 team.setPodaniaKreatywnosc(avgPodaniaKreatywanosc);
@@ -386,17 +381,17 @@ public class PlayerStatsService {
 
                 sredniaDruzynyRepository.save(team);
             }
-            }
+        }
 
     }
 
     public void getSummaryWithPos() {
-        List<Object[]> combinationsTeamsAndSeasons = statystykiZawodnikaRepository.getDistinctBySeasonAndTeamStats();
-        for (Object[] singleCombination : combinationsTeamsAndSeasons) {
-            Long season = (Long) singleCombination[0];
-            Long teamId = (Long) singleCombination[1];
+        List<PlayerStats> combinationsTeamsAndSeasons = statystykiZawodnikaRepository.getPlayerStatsGroupedBySeasonAndTeamStats();
+        for (PlayerStats singleCombination : combinationsTeamsAndSeasons) {
+            long season = singleCombination.getSeason();
+            long teamId = singleCombination.getTeamStats().getTeamId();
 
-            Optional<TeamStats> teamStatsOp = teamStatsRepository.findFirstByTeamId(teamId);
+            Optional<TeamStats> teamStatsOp = teamStatsRepository.findTeamStatsByTeamIdAndSeason(teamId, season);
             if (teamStatsOp.isPresent()) {
                 List<PlayersStatsGroupWPos> players = pogrupowanePozycjamiRepository
                         .getPlayerStatsGroupWPosByTeamStatsAndSeason(teamStatsOp.get(), season);
@@ -422,14 +417,11 @@ public class PlayerStatsService {
                 avgPodaniaKreatywanosc /= sum;
 
                 TeamGroupAvgWPos team = new TeamGroupAvgWPos();
-                Optional<TeamStats> optionalTeam = teamStatsRepository.findFirstByTeamId(teamId);
-                if (optionalTeam.isPresent()) {
-                    team.setTeamStats(optionalTeam.get());
-                }
+                Optional<TeamStats> optionalTeam = teamStatsRepository.findTeamStatsByTeamIdAndSeason(teamId, season);
+                optionalTeam.ifPresent(team::setTeamStats);
                 team.setSeason(season);
-                Optional<TeamStats> optionalName = teamStatsRepository.findFirstByTeamId(teamId);
-                optionalName.ifPresent(statystykiDruzyny -> team.setTeamName(statystykiDruzyny.getTeamName()));
-                optionalName.ifPresent(statystykiDruzyny -> team.setLeagueId(Math.toIntExact(statystykiDruzyny.getLeagues().getLeagueId())));
+                optionalTeam.ifPresent(statystykiDruzyny -> team.setTeamName(statystykiDruzyny.getTeamName()));
+                optionalTeam.ifPresent(statystykiDruzyny -> team.setLeagueId(Math.toIntExact(statystykiDruzyny.getLeagues().getLeagueId())));
                 team.setDryblingSkutecznosc(avgDryblingSkutecznosc);
                 team.setFizycznoscInterakcje(avgFizycznoscInterakcje);
                 team.setPodaniaKreatywnosc(avgPodaniaKreatywanosc);
@@ -445,7 +437,7 @@ public class PlayerStatsService {
     }
 
     public Iterable<PlayerStats> getPlayersByTeamId(Long teamId) {
-        Optional<TeamStats> opTeam = teamStatsRepository.findFirstByTeamId(teamId);
+        Optional<TeamStats> opTeam = null;
         Iterable<PlayerStats> players = null;
         if (opTeam.isPresent()) {
             players = playersStatsRepo.findPlayerStatsByTeamStats(opTeam.get());
