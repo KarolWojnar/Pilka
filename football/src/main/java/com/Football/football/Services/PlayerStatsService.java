@@ -17,6 +17,10 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.function.Supplier;
+import java.util.stream.StreamSupport;
 
 @Service
 @RequiredArgsConstructor
@@ -200,13 +204,14 @@ public class PlayerStatsService {
     public void getAvgOfAllPlayers(Iterable<PlayerStats> players, boolean isPositions, String whereIsPlaying) {
         Iterable<TeamStats> teams = teamStatsRepository.findAll();
 
-        double fixturesCount = 0.0;
-        for (TeamStats team : teams) {
-            fixturesCount += team.getSumaSpotkan();
-        }
+        double fixturesCount = StreamSupport.stream(teams.spliterator(), false)
+                .mapToDouble(TeamStats::getSumaSpotkan)
+                .sum();
 
-        double sumPasses = 0, sumKeyPasses = 0, sumDribbleWon = 0, sumShootsOnGoal = 0, sumFoulsCommited = 0,
-                sumRedCards = 0, sumYellowCards = 0, sumDuelsLoss = 0, sumFoulsDrawn = 0, sumInterpWon = 0, sumDuelsWon = 0;
+        double sumPasses = 0, sumKeyPasses = 0, sumDribbleWon = 0, sumShootsOnGoal = 0, sumFoulsCommited = 0 ,
+                sumRedCards = 0, sumYellowCards = 0, sumDuelsLoss = 0, sumInterpWon = 0, sumFoulsDrawn = 0,
+                sumDuelsWon = 0, sumGoals = 0, sumAsists = 0;
+
         for (PlayerStats player : players) {
             sumPasses += player.getPodania();
             sumKeyPasses += player.getPodaniaKluczowe();
@@ -215,131 +220,146 @@ public class PlayerStatsService {
             sumFoulsCommited += player.getFaulePopelnione();
             sumRedCards += player.getKartkiCzerwone();
             sumYellowCards += player.getKartkiZolte();
-            sumDuelsLoss += (player.getPojedynki() - player.getPojedynkiWygrane());
+            sumDuelsLoss += player.getPojedynki() - player.getPojedynkiWygrane();
             sumInterpWon += player.getPrzechwytyUdane();
             sumFoulsDrawn += player.getFauleNaZawodniku();
             sumDuelsWon += player.getPojedynkiWygrane();
-        }
-        double goleAsystySuma = 0.0;
-        for (TeamStats team : teams) {
-            goleAsystySuma += team.getGoleStrzeloneNaWyjezdzie();
-            goleAsystySuma += team.getGoleStrzeloneWDomu();
+            sumGoals += player.getGole();
+            sumAsists += player.getAsysty();
         }
 
-        sumPasses /= fixturesCount;
-        sumKeyPasses /= fixturesCount;
-        sumDribbleWon /= fixturesCount;
-        sumShootsOnGoal /= fixturesCount;
-        sumFoulsCommited /= fixturesCount;
-        sumRedCards /= fixturesCount;
-        sumYellowCards /= fixturesCount;
-        sumDuelsLoss /= fixturesCount;
-        sumInterpWon /= fixturesCount;
-        sumFoulsDrawn /= fixturesCount;
-        sumDuelsWon /= fixturesCount;
-        goleAsystySuma /= fixturesCount;
+        double[] normalizedSums = {
+                normalize(sumPasses, fixturesCount),
+                normalize(sumKeyPasses, fixturesCount),
+                normalize(sumDribbleWon, fixturesCount),
+                normalize(sumShootsOnGoal, fixturesCount),
+                normalize(sumFoulsCommited, fixturesCount),
+                normalize(sumRedCards, fixturesCount),
+                normalize(sumYellowCards, fixturesCount),
+                normalize(sumDuelsLoss, fixturesCount),
+                normalize(sumInterpWon, fixturesCount),
+                normalize(sumFoulsDrawn, fixturesCount),
+                normalize(sumDuelsWon, fixturesCount),
+                normalize(sumGoals, fixturesCount),
+                normalize(sumAsists, fixturesCount)
+        };
 
-        double[] weights = {90 / sumPasses, 90 / sumKeyPasses, 90 / sumDribbleWon, 90 / sumShootsOnGoal, 90 / sumFoulsCommited,
-                90 / sumRedCards, 90 / sumYellowCards, 90 / sumDuelsLoss, 90 / sumInterpWon, 90 / sumFoulsDrawn, 90 / sumDuelsWon, 90 / goleAsystySuma};
+        double[] weights = calculateWeights(normalizedSums);
 
-        if (!whereIsPlaying.equals("GK")) calculateWeightAndSave(players, weights, isPositions);
-        else getAvgForGKeappers(statystykiZawodnikaRepository.getStatystykiZawodnikasByPozycja("GOALKEEPER"), weights);
+        if (!whereIsPlaying.equals("GK")) {
+            calculateWeightAndSave(players, weights, isPositions);
+        } else {
+            getAvgForGoalkeepers(statystykiZawodnikaRepository.getStatystykiZawodnikasByPozycja("GOALKEEPER"), weights);
+        }
+    }
+
+    private double normalize(double value, double max) {
+        return value / max;
+    }
+
+    private double[] calculateWeights(double[] normalizedSums) {
+        double[] weights = new double[normalizedSums.length + 1];
+        for (int i = 0; i < normalizedSums.length; i++) {
+            weights[i] = 90 / ((normalizedSums[i]));
+        }
+
+        return weights;
+    }
+
+
+    private <T extends PlayersStatsGroupBase> void processPlayerStats(Iterable<PlayerStats> players, double[] weights,
+                                                                      Function<PlayerStats, Optional<T>> getPlayerStatsGroupFunction,
+                                                                      Consumer<T> deletePlayerStatsGroupFunction,
+                                                                      Consumer<T> savePlayerStatsGroupFunction,
+                                                                      Supplier<T> createPlayerStatsGroupFunction) {
+        double maxPasses = 0, maxKeyPasses = 0, maxDribbleWon = 0, maxShootsOnGoal = 0, maxFoulsCommited = 0,
+                maxRedCards = 0, maxYellowCards = 0, maxDuelsLoss = 0, maxInterpWon = 0, maxFoulsDrawn = 0,
+                maxDuelsWon = 0, maxAssists = 0, maxGoals = 0;
+
+        for (PlayerStats player : players) {
+            maxPasses = Math.max(maxPasses, player.getPodania());
+            maxKeyPasses = Math.max(maxKeyPasses, player.getPodaniaKluczowe());
+            maxDribbleWon = Math.max(maxDribbleWon, player.getDryblingiWygrane());
+            maxShootsOnGoal = Math.max(maxShootsOnGoal, player.getStrzalyCelne());
+            maxFoulsCommited = Math.max(maxFoulsCommited, player.getFaulePopelnione());
+            maxRedCards = Math.max(maxRedCards, player.getKartkiCzerwone());
+            maxYellowCards = Math.max(maxYellowCards, player.getKartkiZolte());
+            maxDuelsLoss = Math.max(maxDuelsLoss, player.getPojedynki() - player.getPojedynkiWygrane());
+            maxInterpWon = Math.max(maxInterpWon, player.getPrzechwytyUdane());
+            maxFoulsDrawn = Math.max(maxFoulsDrawn, player.getFauleNaZawodniku());
+            maxDuelsWon = Math.max(maxDuelsWon, player.getPojedynkiWygrane());
+            maxAssists = Math.max(maxAssists, player.getAsysty());
+            maxGoals = Math.max(maxGoals, player.getGole());
+        }
+
+        for (PlayerStats player : players) {
+            Optional<T> optionalPlayerStatsGroup = getPlayerStatsGroupFunction.apply(player);
+            T playerStatsGroup = optionalPlayerStatsGroup.orElseGet(createPlayerStatsGroupFunction);
+
+            playerStatsGroup.setImie(player.getImie() + " " + player.getNazwisko());
+            playerStatsGroup.setPlayerStats(player);
+            playerStatsGroup.setTeamStats(player.getTeamStats());
+            playerStatsGroup.setSeason(player.getSeason());
+            playerStatsGroup.setPozycja(player.getPozycja());
+
+            double normalizedPasses = player.getPodania() / maxPasses;
+            double normalizedKeyPasses = player.getPodaniaKluczowe() / maxKeyPasses;
+            double normalizedAssists = player.getAsysty() / maxAssists;
+            double sumPIK = (normalizedPasses * weights[0] + normalizedKeyPasses * weights[1] + normalizedAssists * weights[12]) /
+                    (weights[0] + weights[1] + weights[12]);
+            playerStatsGroup.setPodaniaKreatywnosc(sumPIK);
+
+            double normalizedDribbleWon = player.getDryblingiWygrane() / maxDribbleWon;
+            double normalizedShotsOnGoal = player.getStrzalyCelne() / maxShootsOnGoal;
+            double normalizedGoals = player.getGole() / maxGoals;
+            double sumDIS = (normalizedDribbleWon * weights[2] + normalizedShotsOnGoal * weights[3] + normalizedGoals * weights[11]) /
+                    (weights[2] + weights[3] + weights[11]);
+            playerStatsGroup.setDryblingSkutecznosc(sumDIS);
+
+            double normalizedFoulsCommited = player.getFaulePopelnione() / maxFoulsCommited;
+            double normalizedRedCards = player.getKartkiCzerwone() / maxRedCards;
+            double normalizedYellowCards = player.getKartkiZolte() / maxYellowCards;
+            double normalizedDuelsLost = (player.getPojedynki() - player.getPojedynkiWygrane()) / maxDuelsLoss;
+            double duelsToReturn = (normalizedFoulsCommited * weights[4] + normalizedRedCards * weights[5] + normalizedYellowCards * weights[6] + normalizedDuelsLost * weights[7]) /
+                    (weights[4] + weights[5] + weights[5] + weights[6]);
+            playerStatsGroup.setFizycznoscInterakcje((duelsToReturn / 4) * 3);
+
+            double normalizedInterceptionsWon = player.getPrzechwytyUdane() / maxInterpWon;
+            double normalizedFoulsDrawn = player.getFauleNaZawodniku() / maxFoulsDrawn;
+            double normalizedDuelsWon = player.getPojedynkiWygrane() / maxDuelsWon;
+            double sumOKP = (normalizedInterceptionsWon * weights[8] + normalizedFoulsDrawn * weights[9] + normalizedDuelsWon * weights[10]) /
+                    (weights[8] + weights[9] + weights[10]);
+            playerStatsGroup.setObronaKotrolaPrzeciwnika(sumOKP);
+
+            if (optionalPlayerStatsGroup.isPresent()) {
+                deletePlayerStatsGroupFunction.accept(playerStatsGroup);
+            }
+            savePlayerStatsGroupFunction.accept(playerStatsGroup);
+        }
     }
 
     private void calculateWeightAndSave(Iterable<PlayerStats> players, double[] weights, boolean isPos) {
-        for (PlayerStats player : players) {
-            if (!isPos) {
-                Optional<PlayersStatsGroup> optionalPlayer = pogrupowaneRepository
-                        .getPogrupowaneStatystykiZawodnikowByPlayerStatsAndSeason(player, player.getSeason());
-                PlayersStatsGroup zawodnik = new PlayersStatsGroup();
-                zawodnik.setImie(player.getImie() + " " + player.getNazwisko());
-                zawodnik.setPlayerStats(player);
-                zawodnik.setTeamStats(player.getTeamStats());
-                zawodnik.setSeason(player.getSeason());
-                zawodnik.setPozycja(player.getPozycja());
-
-                double minutes = player.getMinuty();
-
-                double accuracyPerMinute = (player.getPodania() / minutes) * weights[0];
-                double keysPerMinute = (player.getPodaniaKluczowe() / minutes) * weights[1];
-                double assistsPerMinute = (player.getAsysty() / minutes) * weights[11];
-                zawodnik.setPodaniaKreatywnosc(accuracyPerMinute + keysPerMinute + assistsPerMinute);
-
-                double wonDribblingsPerMinute = (player.getDryblingiWygrane() / minutes) * weights[2];
-                double shotsOnGoalPerMinute = (player.getStrzalyCelne() / minutes) * weights[3];
-                double goalsPerMinute = (player.getGole() / minutes) * weights[11];
-                zawodnik.setDryblingSkutecznosc(wonDribblingsPerMinute + shotsOnGoalPerMinute + goalsPerMinute);
-
-                double foulsCommitedPerMinute = (player.getFaulePopelnione() / minutes) * weights[4];
-                double redCards = (player.getKartkiCzerwone() / minutes) * weights[5];
-                double yellowCards = (player.getKartkiZolte() / minutes) * weights[6];
-                double duelsLost = player.getPojedynki() - player.getPojedynkiWygrane();
-                double duelsLostPerMinute = (duelsLost / minutes) * weights[7];
-                double duelsToReturn = foulsCommitedPerMinute + redCards + yellowCards + duelsLostPerMinute;
-                zawodnik.setFizycznoscInterakcje((duelsToReturn / 4) * 3);
-
-                double interceptionsWonPerMinute = (player.getPrzechwytyUdane() / minutes) * weights[8];
-                double foulsDrawnPerMinute = (player.getFauleNaZawodniku() / minutes) * weights[9];
-                double duelsWonPerMinute = (player.getPojedynkiWygrane() / minutes) * weights[10];
-                zawodnik.setObronaKotrolaPrzeciwnika(interceptionsWonPerMinute + foulsDrawnPerMinute + duelsWonPerMinute);
-
-                if (optionalPlayer.isPresent()) {
-                    PlayersStatsGroup updatePlayer = optionalPlayer.get();
-                    pogrupowaneRepository.delete(updatePlayer);
-                }
-                pogrupowaneRepository.save(zawodnik);
-            } else {
-                setStatsAndSave(weights, player);
-            }
+        if (isPos) {
+            processPlayerStats(players, weights,
+                    (player) -> pogrupowanePozycjamiRepository.getPlayerStatsGroupWPosByPlayerStatsAndSeason(player, player.getSeason()),
+                    (playerStatsGroup) -> pogrupowanePozycjamiRepository.delete(playerStatsGroup),
+                    (playerStatsGroup) -> pogrupowanePozycjamiRepository.save(playerStatsGroup),
+                    PlayersStatsGroupWPos::new);
+        } else {
+            processPlayerStats(players, weights,
+                    (player) -> pogrupowaneRepository.getPogrupowaneStatystykiZawodnikowByPlayerStatsAndSeason(player, player.getSeason()),
+                    (playerStatsGroup) -> pogrupowaneRepository.delete((PlayersStatsGroup) playerStatsGroup),
+                    (playerStatsGroup) -> pogrupowaneRepository.save((PlayersStatsGroup) playerStatsGroup),
+                    PlayersStatsGroup::new);
         }
     }
 
-    public void getAvgForGKeappers(Iterable<PlayerStats> goalkeepers, double[] weights) {
-        for (PlayerStats goalkeeper : goalkeepers) {
-            setStatsAndSave(weights, goalkeeper);
-        }
-    }
-
-    private void setStatsAndSave(double[] weights, PlayerStats goalkeeper) {
-        Optional<PlayersStatsGroupWPos> optionalPlayer = pogrupowanePozycjamiRepository
-                .getPlayerStatsGroupWPosByPlayerStatsAndSeason(goalkeeper, goalkeeper.getSeason());
-        PlayersStatsGroupWPos zawodnik = new PlayersStatsGroupWPos();
-
-        zawodnik.setImie(goalkeeper.getImie() + " " + goalkeeper.getNazwisko());
-        zawodnik.setPlayerStats(goalkeeper);
-        zawodnik.setTeamStats(goalkeeper.getTeamStats());
-        zawodnik.setSeason(goalkeeper.getSeason());
-        zawodnik.setPozycja(goalkeeper.getPozycja());
-
-        double minutes = goalkeeper.getMinuty();
-
-        double accuracyPerMinute = ((goalkeeper.getPodania() * (goalkeeper.getDokladnoscPodan() / 100)) / minutes) * weights[0];
-        double keysPerMinute = (goalkeeper.getPodaniaKluczowe() / minutes) * weights[1];
-        double assistsPerMinute = (goalkeeper.getAsysty() / minutes) * weights[11];
-        zawodnik.setPodaniaKreatywnosc(accuracyPerMinute + keysPerMinute + assistsPerMinute);
-
-        double wonDribblingsPerMinute = (goalkeeper.getDryblingiWygrane() / minutes) * weights[2];
-        double shotsOnGoalPerMinute = (goalkeeper.getStrzalyCelne() / minutes) * weights[3];
-        double goalsPerMinute = (goalkeeper.getGole() / minutes) * weights[11];
-        zawodnik.setDryblingSkutecznosc(wonDribblingsPerMinute + shotsOnGoalPerMinute + goalsPerMinute);
-
-        double foulsCommitedPerMinute = (goalkeeper.getFaulePopelnione() / minutes) * weights[4];
-        double redCards = (goalkeeper.getKartkiCzerwone() / minutes) * weights[5];
-        double yellowCards = (goalkeeper.getKartkiZolte() / minutes) * weights[6];
-        double duelsLostPerMinute = ((goalkeeper.getPojedynki() - goalkeeper.getPojedynkiWygrane()) / minutes) * weights[7];
-        double duelsToReturn = foulsCommitedPerMinute + redCards + yellowCards + duelsLostPerMinute;
-        zawodnik.setFizycznoscInterakcje((duelsToReturn / 4) * 3);
-
-        double interceptionsWonPerMinute = (goalkeeper.getPrzechwytyUdane() / minutes) * weights[8];
-        double foulsDrawnPerMinute = (goalkeeper.getFauleNaZawodniku() / minutes) * weights[9];
-        double duelsWonPerMinute = (goalkeeper.getPojedynkiWygrane() / minutes) * weights[10];
-        zawodnik.setObronaKotrolaPrzeciwnika(interceptionsWonPerMinute + foulsDrawnPerMinute + duelsWonPerMinute);
-
-        if (optionalPlayer.isPresent()) {
-            PlayersStatsGroupWPos updatePlayer = optionalPlayer.get();
-            pogrupowanePozycjamiRepository.delete(updatePlayer);
-        }
-        pogrupowanePozycjamiRepository.save(zawodnik);
+    public void getAvgForGoalkeepers(Iterable<PlayerStats> goalkeepers, double[] weights) {
+        processPlayerStats(goalkeepers, weights,
+                player -> pogrupowanePozycjamiRepository.getPlayerStatsGroupWPosByPlayerStatsAndSeason(player, player.getSeason()),
+                playerStatsGroup -> pogrupowanePozycjamiRepository.delete(playerStatsGroup),
+                playerStatsGroup -> pogrupowanePozycjamiRepository.save(playerStatsGroup),
+                PlayersStatsGroupWPos::new);
     }
 
     public void getSummary() {

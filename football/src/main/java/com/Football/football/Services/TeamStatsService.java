@@ -7,7 +7,6 @@ import lombok.RequiredArgsConstructor;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -18,6 +17,8 @@ import java.net.http.HttpResponse;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Supplier;
+import java.util.stream.StreamSupport;
 
 @Service
 @RequiredArgsConstructor
@@ -222,76 +223,131 @@ public class TeamStatsService {
     }
 
     public void getSumSum() {
-        double[] weights = {1.0, 0.5, 0.3, -0.2};
-        Iterable<TeamGroupAvg> allTeams = sredniaDruzynyRepository.findAll();
-        for (TeamGroupAvg team : allTeams) {
-            Optional<TeamAvg> optional = avgAllRepository
-                    .findSredniaZeWszystkiegoByTeamStatsAndSeasonAndCzyUwzglednionePozycje(team.getTeamStats(), team.getSeason(), false);
-            if (optional.isPresent()) {
-                TeamAvg updateTeam = optional.get();
-                avgAllRepository.delete(updateTeam);
-            }
-            TeamAvg avgTeam = getSredniaZeWszystkiego(team, weights, false);
-            avgAllRepository.save(avgTeam);
-        }
+        calculateAndSaveTeamAverages(sredniaDruzynyRepository::findAll, false);
     }
 
     public void getSumSumWPos() {
-        double[] weights = {1.0, 0.5, 0.3, -0.2};
-        Iterable<TeamGroupAvgWPos> allTeams = srDruzynyPozycjeRepository.findAll();
-        for (TeamGroupAvgWPos team : allTeams) {
-            Optional<TeamAvg> optional = avgAllRepository
-                    .findSredniaZeWszystkiegoByTeamStatsAndSeasonAndCzyUwzglednionePozycje(team.getTeamStats(), team.getSeason(), true);
-            if (optional.isPresent()) {
-                TeamAvg updateTeam = optional.get();
-                avgAllRepository.delete(updateTeam);
-            }
-            TeamAvg avgTeam = getSredniaZeWszystkiegoPos(team, weights, true);
+        calculateAndSaveTeamAverages(srDruzynyPozycjeRepository::findAll, true);
+    }
 
-            avgAllRepository.save(avgTeam);
+    private <T> void calculateAndSaveTeamAverages(Supplier<Iterable<T>> supplier, boolean isPos) {
+        Iterable<T> allTeams = supplier.get();
+
+        double[] sums = StreamSupport.stream(allTeams.spliterator(), false)
+                .reduce(new double[5], (acc, team) -> {
+                    acc[0] += getDryblingSkutecznosc(team);
+                    acc[1] += getPodaniaKreatywnosc(team);
+                    acc[2] += getObronaKotrolaPrzeciwnika(team);
+                    acc[3] += getFizycznoscInterakcje(team);
+                    acc[4]++;
+                    return acc;
+                }, (a, b) -> {
+                    for (int i = 0; i < a.length; i++) {
+                        a[i] += b[i];
+                    }
+                    return a;
+                });
+
+        double sumDiS = sums[0] / sums[4];
+        double sumPiK = sums[1] / sums[4];
+        double sumOiKK = sums[2] / sums[4];
+        double sumFiI = sums[3] / sums[4];
+
+        // Normalizacja wartości
+        double maxStat = Math.max(Math.max(sumDiS, sumPiK), Math.max(sumOiKK, Math.abs(sumFiI)));
+        sumDiS /= maxStat;
+        sumPiK /= maxStat;
+        sumOiKK /= maxStat;
+        sumFiI /= maxStat;
+
+        // Zastosowanie wartości bezwzględnych
+        sumFiI = Math.abs(sumFiI);
+
+        double[] weights = {sumDiS, sumPiK, sumOiKK, sumFiI};
+
+        allTeams.forEach(team -> {
+            Optional<TeamAvg> opt = avgAllRepository.findSredniaZeWszystkiegoByTeamStatsAndSeasonAndCzyUwzglednionePozycje(
+                    getTeamStats(team), getSeason(team), isPos
+            );
+            opt.ifPresent(avgAllRepository::delete);
+
+            TeamAvg teamAvg = getSredniaZeWszystkiego(team, weights, isPos);
+            avgAllRepository.save(teamAvg);
+        });
+    }
+
+    private <T> TeamAvg getSredniaZeWszystkiego(T team, double[] weights, boolean isPos) {
+        double summaryWeight = 0.0;
+        summaryWeight += (getDryblingSkutecznosc(team) * weights[0]);
+        summaryWeight += (getPodaniaKreatywnosc(team) * weights[1]);
+        summaryWeight += (getObronaKotrolaPrzeciwnika(team) * weights[2]);
+        summaryWeight += (getFizycznoscInterakcje(team) * weights[3]);
+
+        double sumWeights = 0;
+        for (double weight : weights) {
+            sumWeights += weight;
         }
-    }
-
-    private TeamAvg getSredniaZeWszystkiegoPos(TeamGroupAvgWPos team, double[] weights, boolean isPos) {
-        double summaryWeight = 0.0;
 
         TeamAvg avgTeam = new TeamAvg();
-
-        summaryWeight += (team.getDryblingSkutecznosc() * weights[0]);
-        summaryWeight += (team.getPodaniaKreatywnosc() * weights[1]);
-        summaryWeight += (team.getObronaKotrolaPrzeciwnika() * weights[2]);
-        summaryWeight += (team.getFizycznoscInterakcje() * weights[3]);
-
-        double sum = 0;
-        for (double x: weights) sum += x;
-
-        avgTeam.setRaiting(summaryWeight / sum);
-        avgTeam.setTeamStats(team.getTeamStats());
-        avgTeam.setSeason(team.getSeason());
+        avgTeam.setRaiting(summaryWeight / sumWeights);
+        avgTeam.setTeamStats(getTeamStats(team));
+        avgTeam.setSeason(getSeason(team));
         avgTeam.setCzyUwzglednionePozycje(isPos);
         return avgTeam;
     }
 
-    private TeamAvg getSredniaZeWszystkiego(TeamGroupAvg team, double[] weights, boolean isPos) {
-        double summaryWeight = 0.0;
+    private <T> double getDryblingSkutecznosc(T team) {
+        if (team instanceof TeamGroupAvg) {
+            return ((TeamGroupAvg) team).getDryblingSkutecznosc();
+        } else if (team instanceof TeamGroupAvgWPos) {
+            return ((TeamGroupAvgWPos) team).getDryblingSkutecznosc();
+        }
+        throw new IllegalArgumentException("Unsupported team type");
+    }
 
-        TeamAvg avgTeam = new TeamAvg();
+    private <T> double getPodaniaKreatywnosc(T team) {
+        if (team instanceof TeamGroupAvg) {
+            return ((TeamGroupAvg) team).getPodaniaKreatywnosc();
+        } else if (team instanceof TeamGroupAvgWPos) {
+            return ((TeamGroupAvgWPos) team).getPodaniaKreatywnosc();
+        }
+        throw new IllegalArgumentException("Unsupported team type");
+    }
 
+    private <T> double getObronaKotrolaPrzeciwnika(T team) {
+        if (team instanceof TeamGroupAvg) {
+            return ((TeamGroupAvg) team).getObronaKotrolaPrzeciwnika();
+        } else if (team instanceof TeamGroupAvgWPos) {
+            return ((TeamGroupAvgWPos) team).getObronaKotrolaPrzeciwnika();
+        }
+        throw new IllegalArgumentException("Unsupported team type");
+    }
 
-        summaryWeight += (team.getDryblingSkutecznosc() * weights[0]);
-        summaryWeight += (team.getPodaniaKreatywnosc() * weights[1]);
-        summaryWeight += (team.getObronaKotrolaPrzeciwnika() * weights[2]);
-        summaryWeight += (team.getFizycznoscInterakcje() * weights[3]);
+    private <T> double getFizycznoscInterakcje(T team) {
+        if (team instanceof TeamGroupAvg) {
+            return ((TeamGroupAvg) team).getFizycznoscInterakcje();
+        } else if (team instanceof TeamGroupAvgWPos) {
+            return ((TeamGroupAvgWPos) team).getFizycznoscInterakcje();
+        }
+        throw new IllegalArgumentException("Unsupported team type");
+    }
 
-        double sum = 0;
-        for (double x: weights) sum += x;
+    private <T> TeamStats getTeamStats(T team) {
+        if (team instanceof TeamGroupAvg) {
+            return ((TeamGroupAvg) team).getTeamStats();
+        } else if (team instanceof TeamGroupAvgWPos) {
+            return ((TeamGroupAvgWPos) team).getTeamStats();
+        }
+        throw new IllegalArgumentException("Unsupported team type");
+    }
 
-
-        avgTeam.setRaiting(summaryWeight / sum);
-        avgTeam.setTeamStats(team.getTeamStats());
-        avgTeam.setSeason(team.getSeason());
-        avgTeam.setCzyUwzglednionePozycje(isPos);
-        return avgTeam;
+    private <T> Long getSeason(T team) {
+        if (team instanceof TeamGroupAvg) {
+            return ((TeamGroupAvg) team).getSeason();
+        } else if (team instanceof TeamGroupAvgWPos) {
+            return ((TeamGroupAvgWPos) team).getSeason();
+        }
+        throw new IllegalArgumentException("Unsupported team type");
     }
 
     public List<Double> getAllRaitings(Iterable<TeamAvg> a, Iterable<TeamAvg> b,

@@ -7,32 +7,6 @@ import lombok.Setter;
 @Entity
 @Getter
 @Setter
-public class PlayersStatsGroupWPos {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "id pilkarza")
-    private PlayerStats playerStats;
-    @Column(name = "Imie i nazwisko")
-    private String imie;
-    @Column(name = "pozycja")
-    private String pozycja;
-    @Column(name = "Drybling i Skuteczność")
-    private Double dryblingSkutecznosc;
-    @Column(name = "Fizyczność i Interakcje")
-    private Double fizycznoscInterakcje;
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "id druzyny")
-    private TeamStats teamStats;
-    @Column(name = "Sezon rozgrywek")
-    private Long season;
-    @Column(name = "Obrona i kotnrola przeciwnika")
-    private Double obronaKotrolaPrzeciwnika;
-
-    @Column(name = "podania i kreatywność")
-    private Double podaniaKreatywnosc;
+public class PlayersStatsGroupWPos extends PlayersStatsGroupBase{
     public PlayersStatsGroupWPos() {}
 }
