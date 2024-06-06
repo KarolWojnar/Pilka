@@ -15,6 +15,7 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Consumer;
@@ -249,7 +250,11 @@ public class PlayerStatsService {
         if (!whereIsPlaying.equals("GK")) {
             calculateWeightAndSave(players, weights, isPositions);
         } else {
-            getAvgForGoalkeepers(statystykiZawodnikaRepository.getStatystykiZawodnikasByPozycja("GOALKEEPER"), weights);
+            List<String> positions = new ArrayList<>();
+            positions.add("Goalkeeper");
+            positions.add("Defender");
+            Iterable<PlayerStats> goalkeepers = statystykiZawodnikaRepository.findPlayerStatsByPozycjaIn(positions);
+            getAvgForGoalkeepers(goalkeepers, weights);
         }
     }
 
@@ -272,9 +277,9 @@ public class PlayerStatsService {
                                                                       Consumer<T> deletePlayerStatsGroupFunction,
                                                                       Consumer<T> savePlayerStatsGroupFunction,
                                                                       Supplier<T> createPlayerStatsGroupFunction) {
-        double maxPasses = 0, maxKeyPasses = 0, maxDribbleWon = 0, maxShootsOnGoal = 0, maxFoulsCommited = 0,
-                maxRedCards = 0, maxYellowCards = 0, maxDuelsLoss = 0, maxInterpWon = 0, maxFoulsDrawn = 0,
-                maxDuelsWon = 0, maxAssists = 0, maxGoals = 0;
+        double maxPasses = 1, maxKeyPasses = 1, maxDribbleWon = 1, maxShootsOnGoal = 1, maxFoulsCommited = 1,
+                maxRedCards = 1, maxYellowCards = 1, maxDuelsLoss = 1, maxInterpWon = 1, maxFoulsDrawn = 1,
+                maxDuelsWon = 1, maxAssists = 1, maxGoals = 1;
 
         for (PlayerStats player : players) {
             maxPasses = Math.max(maxPasses, player.getPodania());
@@ -348,108 +353,114 @@ public class PlayerStatsService {
         } else {
             processPlayerStats(players, weights,
                     (player) -> pogrupowaneRepository.getPogrupowaneStatystykiZawodnikowByPlayerStatsAndSeason(player, player.getSeason()),
-                    (playerStatsGroup) -> pogrupowaneRepository.delete((PlayersStatsGroup) playerStatsGroup),
-                    (playerStatsGroup) -> pogrupowaneRepository.save((PlayersStatsGroup) playerStatsGroup),
+                    (playerStatsGroup) -> pogrupowaneRepository.delete(playerStatsGroup),
+                    (playerStatsGroup) -> pogrupowaneRepository.save(playerStatsGroup),
                     PlayersStatsGroup::new);
         }
     }
 
     public void getAvgForGoalkeepers(Iterable<PlayerStats> goalkeepers, double[] weights) {
         processPlayerStats(goalkeepers, weights,
-                player -> pogrupowanePozycjamiRepository.getPlayerStatsGroupWPosByPlayerStatsAndSeason(player, player.getSeason()),
-                playerStatsGroup -> pogrupowanePozycjamiRepository.delete(playerStatsGroup),
-                playerStatsGroup -> pogrupowanePozycjamiRepository.save(playerStatsGroup),
+                (player) -> pogrupowanePozycjamiRepository.getPlayerStatsGroupWPosByPlayerStatsAndSeason(player, player.getSeason()),
+                (playerStatsGroup) -> pogrupowanePozycjamiRepository.delete(playerStatsGroup),
+                (playerStatsGroup) -> pogrupowanePozycjamiRepository.save(playerStatsGroup),
                 PlayersStatsGroupWPos::new);
     }
 
     public void getSummary() {
-        List<PlayerStats> combinationsTeamsAndSeasons = statystykiZawodnikaRepository.getPlayerStatsGroupedBySeasonAndTeamStats();
-        for (PlayerStats singleCombination : combinationsTeamsAndSeasons) {
-            long season = singleCombination.getSeason();
-            long teamId = singleCombination.getTeamStats().getTeamId();
-            Optional<TeamStats> teamStatsOp = teamStatsRepository.findTeamStatsByTeamIdAndSeason(teamId, season);
-            if (teamStatsOp.isPresent()) {
-                List<PlayersStatsGroup> players = pogrupowaneRepository.getPogrupowaneStatystykiZawodnikowByTeamStatsAndSeason(teamStatsOp.get(), season);
-                Optional<TeamGroupAvg> optionalSredniaDruzyny = sredniaDruzynyRepository.getSredniaDruzynyByTeamStatsAndSeason(teamStatsOp.get(), season);
-                if (optionalSredniaDruzyny.isPresent()) {
-                    TeamGroupAvg prevTeam = optionalSredniaDruzyny.get();
-                    sredniaDruzynyRepository.delete(prevTeam);
-                }
-                double sum = 0, avgPodaniaKreatywanosc = 0, avgDryblingSkutecznosc = 0, avgFizycznoscInterakcje = 0, avgObronaKotrolaPrzeciwnika = 0;
-                for (PlayersStatsGroup player : players) {
-                    sum++;
-                    avgFizycznoscInterakcje += player.getFizycznoscInterakcje();
-                    avgDryblingSkutecznosc += player.getDryblingSkutecznosc();
-                    avgObronaKotrolaPrzeciwnika += player.getObronaKotrolaPrzeciwnika();
-                    avgPodaniaKreatywanosc += player.getPodaniaKreatywnosc();
-                }
-
-                avgFizycznoscInterakcje /= sum;
-                avgDryblingSkutecznosc /= sum;
-                avgObronaKotrolaPrzeciwnika /= sum;
-                avgPodaniaKreatywanosc /= sum;
-
-                TeamGroupAvg team = new TeamGroupAvg();
-                Optional<TeamStats> optionalTeam = teamStatsRepository.findTeamStatsByTeamIdAndSeason(teamId, season);
-                optionalTeam.ifPresent(team::setTeamStats);
-                team.setSeason(season);
-                optionalTeam.ifPresent(statystykiDruzyny -> team.setTeamName(statystykiDruzyny.getTeamName()));
-                team.setDryblingSkutecznosc(avgDryblingSkutecznosc);
-                team.setFizycznoscInterakcje(avgFizycznoscInterakcje);
-                team.setPodaniaKreatywnosc(avgPodaniaKreatywanosc);
-                team.setObronaKotrolaPrzeciwnika(avgObronaKotrolaPrzeciwnika);
-
-                sredniaDruzynyRepository.save(team);
-            }
-        }
-
+        processSummary(false);
     }
 
     public void getSummaryWithPos() {
+        processSummary(true);
+    }
+
+    private void processSummary(boolean withPos) {
         List<PlayerStats> combinationsTeamsAndSeasons = statystykiZawodnikaRepository.getPlayerStatsGroupedBySeasonAndTeamStats();
+
         for (PlayerStats singleCombination : combinationsTeamsAndSeasons) {
             long season = singleCombination.getSeason();
             long teamId = singleCombination.getTeamStats().getTeamId();
 
             Optional<TeamStats> teamStatsOp = teamStatsRepository.findTeamStatsByTeamIdAndSeason(teamId, season);
             if (teamStatsOp.isPresent()) {
-                List<PlayersStatsGroupWPos> players = pogrupowanePozycjamiRepository
-                        .getPlayerStatsGroupWPosByTeamStatsAndSeason(teamStatsOp.get(), season);
-                Optional<TeamGroupAvgWPos> optionalSredniaDruzyny = srDruzynyPozycjeRepository
-                        .getSredniaDruzynyPozycjeUwzglednioneByTeamStatsAndSeason(teamStatsOp.get(), season);
-                if (optionalSredniaDruzyny.isPresent()) {
-                    TeamGroupAvgWPos prevTeam = optionalSredniaDruzyny.get();
-                    srDruzynyPozycjeRepository.delete(prevTeam);
+                TeamStats teamStats = teamStatsOp.get();
+                if (withPos) {
+                    processTeamStatsWithPos(season, teamStats);
+                } else {
+                    processTeamStats(season, teamStats);
                 }
-                double sum = 0, avgPodaniaKreatywanosc = 0, avgDryblingSkutecznosc = 0, avgFizycznoscInterakcje = 0, avgObronaKotrolaPrzeciwnika = 0;
-
-                for (PlayersStatsGroupWPos player : players) {
-                    sum++;
-                    avgFizycznoscInterakcje += player.getFizycznoscInterakcje();
-                    avgDryblingSkutecznosc += player.getDryblingSkutecznosc();
-                    avgObronaKotrolaPrzeciwnika += player.getObronaKotrolaPrzeciwnika();
-                    avgPodaniaKreatywanosc += player.getPodaniaKreatywnosc();
-                }
-
-                avgFizycznoscInterakcje /= sum;
-                avgDryblingSkutecznosc /= sum;
-                avgObronaKotrolaPrzeciwnika /= sum;
-                avgPodaniaKreatywanosc /= sum;
-
-                TeamGroupAvgWPos team = new TeamGroupAvgWPos();
-                Optional<TeamStats> optionalTeam = teamStatsRepository.findTeamStatsByTeamIdAndSeason(teamId, season);
-                optionalTeam.ifPresent(team::setTeamStats);
-                team.setSeason(season);
-                optionalTeam.ifPresent(statystykiDruzyny -> team.setTeamName(statystykiDruzyny.getTeamName()));
-                optionalTeam.ifPresent(statystykiDruzyny -> team.setLeagueId(Math.toIntExact(statystykiDruzyny.getLeagues().getLeagueId())));
-                team.setDryblingSkutecznosc(avgDryblingSkutecznosc);
-                team.setFizycznoscInterakcje(avgFizycznoscInterakcje);
-                team.setPodaniaKreatywnosc(avgPodaniaKreatywanosc);
-                team.setObronaKotrolaPrzeciwnika(avgObronaKotrolaPrzeciwnika);
-
-                srDruzynyPozycjeRepository.save(team);
             }
         }
+    }
+
+    private void processTeamStats(long season, TeamStats teamStats) {
+        List<PlayersStatsGroup> players = pogrupowaneRepository.getPogrupowaneStatystykiZawodnikowByTeamStatsAndSeason(teamStats, season);
+
+        double sum = 0, avgPodaniaKreatywanosc = 0, avgDryblingSkutecznosc = 0, avgFizycznoscInterakcje = 0, avgObronaKotrolaPrzeciwnika = 0;
+
+        for (PlayersStatsGroup player : players) {
+            sum++;
+            avgFizycznoscInterakcje += player.getFizycznoscInterakcje();
+            avgDryblingSkutecznosc += player.getDryblingSkutecznosc();
+            avgObronaKotrolaPrzeciwnika += player.getObronaKotrolaPrzeciwnika();
+            avgPodaniaKreatywanosc += player.getPodaniaKreatywnosc();
+        }
+        TeamGroupAvg teamGroupAvg = new TeamGroupAvg();
+        if (!players.isEmpty()) {
+            teamGroupAvg.setFizycznoscInterakcje(avgFizycznoscInterakcje / sum);
+            teamGroupAvg.setDryblingSkutecznosc(avgDryblingSkutecznosc / sum);
+            teamGroupAvg.setObronaKotrolaPrzeciwnika(avgObronaKotrolaPrzeciwnika / sum);
+            teamGroupAvg.setPodaniaKreatywnosc(avgPodaniaKreatywanosc / sum);
+        } else {
+            teamGroupAvg = null;
+        }
+
+        teamGroupAvg.setSeason(season);
+        teamGroupAvg.setTeamStats(teamStats);
+        teamGroupAvg.setTeamName(teamStats.getTeamName());
+        saveTeamGroupAvg(teamGroupAvg, teamStats, season);
+    }
+
+    private void processTeamStatsWithPos(long season, TeamStats teamStats) {
+        List<PlayersStatsGroupWPos> players = pogrupowanePozycjamiRepository.getPlayerStatsGroupWPosByTeamStatsAndSeason(teamStats, season);
+
+        double sum = 0, avgPodaniaKreatywanosc = 0, avgDryblingSkutecznosc = 0, avgFizycznoscInterakcje = 0, avgObronaKotrolaPrzeciwnika = 0;
+
+        for (PlayersStatsGroupWPos player : players) {
+            sum++;
+            avgFizycznoscInterakcje += player.getFizycznoscInterakcje();
+            avgDryblingSkutecznosc += player.getDryblingSkutecznosc();
+            avgObronaKotrolaPrzeciwnika += player.getObronaKotrolaPrzeciwnika();
+            avgPodaniaKreatywanosc += player.getPodaniaKreatywnosc();
+        }
+        TeamGroupAvgWPos teamGroupAvgWPos = new TeamGroupAvgWPos();
+        if (!players.isEmpty()) {
+            teamGroupAvgWPos.setFizycznoscInterakcje(avgFizycznoscInterakcje / sum);
+            teamGroupAvgWPos.setDryblingSkutecznosc(avgDryblingSkutecznosc / sum);
+            teamGroupAvgWPos.setObronaKotrolaPrzeciwnika(avgObronaKotrolaPrzeciwnika / sum);
+            teamGroupAvgWPos.setPodaniaKreatywnosc(avgPodaniaKreatywanosc / sum);
+        } else {
+            teamGroupAvgWPos = null;
+        }
+
+        teamGroupAvgWPos.setSeason(season);
+        teamGroupAvgWPos.setTeamStats(teamStats);
+        teamGroupAvgWPos.setTeamName(teamStats.getTeamName());
+        saveTeamGroupAvgWPos(teamGroupAvgWPos, teamStats, season);
+    }
+
+
+    private void saveTeamGroupAvg(TeamGroupAvg teamGroupAvg, TeamStats teamStats, long season) {
+        Optional<TeamGroupAvg> optionalSredniaDruzyny = sredniaDruzynyRepository.getSredniaDruzynyByTeamStatsAndSeason(teamStats, season);
+        optionalSredniaDruzyny.ifPresent(sredniaDruzynyRepository::delete);
+        sredniaDruzynyRepository.save(teamGroupAvg);
+    }
+
+    private void saveTeamGroupAvgWPos(TeamGroupAvgWPos teamGroupAvgWPos, TeamStats teamStats, long season) {
+        Optional<TeamGroupAvgWPos> optionalSredniaDruzyny = srDruzynyPozycjeRepository.getSredniaDruzynyPozycjeUwzglednioneByTeamStatsAndSeason(teamStats, season);
+        optionalSredniaDruzyny.ifPresent(srDruzynyPozycjeRepository::delete);
+        srDruzynyPozycjeRepository.save(teamGroupAvgWPos);
     }
 
     public Optional<PlayerStats> getPlayerById(Long id) {

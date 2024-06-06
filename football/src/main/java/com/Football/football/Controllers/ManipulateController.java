@@ -22,9 +22,9 @@ public class ManipulateController {
     }
     @GetMapping("/get-avg-by-possition")
     public String getAvgByPos() {
-        playerStatsService.getAvgOfAllPlayers(statystykiZawodnikaRepository.getStatystykiZawodnikasByPozycja("Attacker"), true, "Player");
-        playerStatsService.getAvgOfAllPlayers(statystykiZawodnikaRepository.getStatystykiZawodnikasByPozycja("Midfielder"), true, "Player");
-        playerStatsService.getAvgOfAllPlayers(statystykiZawodnikaRepository.getStatystykiZawodnikasByPozycja("Defender"), true, "Player");
+        playerStatsService.getAvgOfAllPlayers(statystykiZawodnikaRepository.getPlayerStatsByPozycja("Attacker"), true, "Player");
+        playerStatsService.getAvgOfAllPlayers(statystykiZawodnikaRepository.getPlayerStatsByPozycja("Midfielder"), true, "Player");
+        playerStatsService.getAvgOfAllPlayers(statystykiZawodnikaRepository.getPlayerStatsByPozycja("Defender"), true, "Player");
         playerStatsService.getAvgOfAllPlayers(statystykiZawodnikaRepository.findAll(), true, "GK");
         return "index";
     }
