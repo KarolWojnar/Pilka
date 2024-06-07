@@ -46,4 +46,10 @@ public class FixtureController {
     public String getFixtureView() {
         return "fixtures";
     }
+
+    @GetMapping("/sumByFixture")
+    public String sumByFixture(Model model) {
+        fixtureService.sumFixturesByTeam();
+        return "index";
+    }
 }

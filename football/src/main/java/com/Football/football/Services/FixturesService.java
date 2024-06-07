@@ -1,9 +1,11 @@
 package com.Football.football.Services;
 
 import com.Football.football.ApiKeyManager;
+import com.Football.football.Repositories.FixtureTeamsStatsRepository;
 import com.Football.football.Repositories.FixturesStatsRepo;
 import com.Football.football.Repositories.PlayersStatsRepo;
 import com.Football.football.Repositories.TeamStatsRepo;
+import com.Football.football.Tables.FixtureTeamsStats;
 import com.Football.football.Tables.FixturesStats;
 import com.Football.football.Tables.PlayerStats;
 import com.Football.football.Tables.TeamStats;
@@ -21,10 +23,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -34,6 +33,7 @@ public class FixturesService {
     private final ApiKeyManager apiKeyManager;
     private final TeamStatsRepo teamStatsRepo;
     private final PlayersStatsRepo playersStatsRepo;
+    private final FixtureTeamsStatsRepository fixtureTeamsStatsRepository;
     private HttpClient httpClient = HttpClient.newHttpClient();
 
     public void saveAllFixtures(Long leagueId, Long year) throws IOException, InterruptedException, JSONException {
@@ -60,7 +60,7 @@ public class FixturesService {
                     JSONArray fixtures = jResponse.getJSONArray("response");
                     Map<Long, TeamStats> teamStatsMap = fetchTeamStatsMap(year);
                     Map<Long, PlayerStats> playerStatsMap = fetchPlayerStatsMap(year);
-                    for (int i = 0; i < fixtures.length(); i++) {
+                    for (int i = 380; i < fixtures.length(); i++) {
                         JSONObject fixture = fixtures.getJSONObject(i);
                         saveNewFixture(fixture, year, teamStatsMap, playerStatsMap);
                     }
@@ -228,10 +228,6 @@ public class FixturesService {
         // TODO: Pobranie jednego spotkania
     }
 
-    public void saveFixture(FixturesStats fixture) {
-        // TODO: Dodanie jednego spotkania
-    }
-
     public List<PlayerStats> getFixturesForTeamAndSeason(long teamId, long season, LocalDateTime startDate, LocalDateTime endDate) {
         Optional<TeamStats> optionalTeam = teamStatsRepo.findTeamStatsByTeamIdAndSeason(teamId, season);
         List<PlayerStats> aggregatedPlayersStats = new ArrayList<>();
@@ -268,5 +264,112 @@ public class FixturesService {
             });
         }
         return aggregatedPlayersStats;
+    }
+
+    public void sumFixturesByTeam() {
+        List<Integer> fixturesId = fixtureRepository.getAllFixturesIDs();
+        int finish = fixturesId.size();
+        int loading = finish / 100;
+        int processing = 0;
+        int i = 1;
+        for (int fID : fixturesId) {
+            findFixtureAndSaveByTeam(fID);
+            processing++;
+            if (loading < processing) {
+                loading += loading;
+                System.out.println(i + "%...");
+                i += 1;
+            }
+        }
+    }
+
+    private void findFixtureAndSaveByTeam(int fID) {
+        List<FixturesStats> fixture = fixtureRepository.findByFixtureId(fID);
+        Long teamAId = null;
+        Long teamBId = null;
+        for (FixturesStats x : fixture) {
+            if (teamAId == null) {
+                teamAId = x.getTeamStats().getId();
+            } else if (teamBId == null && !Objects.equals(x.getTeamStats().getId(), teamAId)) {
+                teamBId = x.getTeamStats().getId();
+                break;
+            }
+        }
+        Long finalTeamAId = teamAId;
+        List<FixturesStats> teamA = fixture.stream()
+                .filter(fs -> Objects.equals(fs.getTeamStats().getId(), finalTeamAId))
+                .toList();
+
+        Long finalTeamBId = teamBId;
+        List<FixturesStats> teamB = fixture.stream()
+                .filter(fs -> Objects.equals(fs.getTeamStats().getId(), finalTeamBId))
+                .toList();
+
+        saveFixtures(teamA);
+        saveFixtures(teamB);
+    }
+
+    public void saveFixtures(List<FixturesStats> fixture) {
+        FixtureTeamsStats fts = new FixtureTeamsStats();
+
+        fts.setFixtureDate(fixture.getFirst().getFixtureDate());
+        fts.setTeamStats(fixture.getFirst().getTeamStats());
+        fts.setEnemyStats(fixture.getFirst().getEnemyStats());
+        fts.setFixtureId(fixture.getFirst().getFixtureId());
+
+        double rating = 0, accuracyPasses = 0, interceptions = 0, blocks = 0,
+            totalTrackles = 0, duels = 0, duelsWon = 0, dribbles = 0, dribblesWon = 0,
+            foulsCommited = 0, foulsDrawn = 0, redCards = 0, yellowCards = 0, penaltyWon = 0, penaltyCommited = 0,
+            penaltyScored = 0, penaltyMissed = 0, penaltySaves = 0,
+            offisde = 0, shots = 0, shotsOnGoal = 0, goals = 0, goalsConceded = 0,
+            asists = 0, passes = 0, keyPasses = 0, summary = 0;
+
+        for (FixturesStats fs : fixture) {
+            summary++;
+            rating += fs.getRating();
+            accuracyPasses += fs.getAccuracyPasses();
+            blocks += fs.getBlocks(); totalTrackles += fs.getTotalTackles();
+            duels += fs.getDuels(); duelsWon += fs.getDuelsWon();
+            dribbles += fs.getDribbles(); dribblesWon += fs.getDribblesWon();
+            foulsCommited += fs.getFoulsCommited(); foulsDrawn += fs.getFoulsDrawn();
+            redCards += fs.getRedCards(); yellowCards += fs.getYellowCards();
+            penaltyScored += fs.getPenaltyScored(); interceptions += fs.getInterceptions();
+            penaltySaves += fs.getPenaltySaves(); penaltyWon += fs.getPenaltyWon();
+            penaltyCommited += fs.getPenaltyCommited();
+            penaltyMissed += fs.getPenaltyMissed(); offisde += fs.getOffside();
+            shots += fs.getShots(); shotsOnGoal += fs.getShotsOnGoal();
+            goals += fs.getGoals(); goalsConceded += fs.getGoalsConceded();
+            asists += fs.getAsists(); passes += fs.getPasses();
+            keyPasses += fs.getKeyPasses();
+        }
+
+        fts.setRating(rating / summary);
+        fts.setAccuracyPasses(accuracyPasses / summary);
+        fts.setInterceptions(interceptions / summary);
+        fts.setBlocks(blocks / summary);
+        fts.setTotalTackles(totalTrackles / summary);
+        fts.setDuels(duels / summary);
+        fts.setDuelsWon(duelsWon / summary);
+        fts.setDribbles(dribbles / summary);
+        fts.setDribblesWon(dribblesWon / summary);
+        fts.setFoulsCommited(foulsCommited / summary);
+        fts.setFoulsDrawn(foulsDrawn / summary);
+        fts.setRedCards(redCards / summary);
+        fts.setYellowCards(yellowCards / summary);
+        fts.setPenaltyWon(penaltyWon / summary);
+        fts.setPenaltyCommited(penaltyCommited / summary);
+        fts.setPenaltyScored(penaltyScored / summary);
+        fts.setPenaltyMissed(penaltyMissed / summary);
+        fts.setPenaltySaves(penaltySaves / summary);
+        fts.setOffside(offisde / summary);
+        fts.setShots(shots / summary);
+        fts.setShotsOnGoal(shotsOnGoal / summary);
+        fts.setGoals(goals / summary);
+        fts.setGoalsConceded(goalsConceded / summary);
+        fts.setAsists(asists / summary);
+        fts.setPasses(passes / summary);
+        fts.setKeyPasses(keyPasses / summary);
+
+        fixtureTeamsStatsRepository.save(fts);
     }
 }

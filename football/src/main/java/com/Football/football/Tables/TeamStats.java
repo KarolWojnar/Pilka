@@ -85,4 +85,6 @@ public class TeamStats {
     private List<FixturesStats> fixtures;
     @OneToMany(mappedBy = "enemyStats", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<FixturesStats> enemy;
+    @OneToMany(mappedBy = "teamStats", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<FixtureTeamsStats> teamStats;
 }

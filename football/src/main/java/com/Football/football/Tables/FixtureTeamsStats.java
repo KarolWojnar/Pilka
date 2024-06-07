@@ -3,25 +3,17 @@ package com.Football.football.Tables;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
+
 import java.time.LocalDateTime;
 
 @Entity
 @Getter
 @Setter
-public class FixturesStats{
+public class FixtureTeamsStats {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "id zawodnika")
-    private PlayerStats playerStats;
-    @Column(name = "imie i nazwisko zawodnika")
-    private String name;
-    @Column(name = "minuty")
-    private double minutes;
-    @Column(name = "pozycja")
-    private String position;
-    @Column(name = "id spotkania")
+    @Column(name ="id spotkania")
     private int fixtureId;
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id druzyny")
