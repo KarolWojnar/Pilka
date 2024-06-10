@@ -52,4 +52,16 @@ public class FixtureController {
         fixtureService.sumFixturesByTeam();
         return "index";
     }
+
+    @GetMapping("/groupAll")
+    public String groupAll(Model model) {
+        fixtureService.groupAllTeams();
+        return "index";
+    }
+
+    @GetMapping("/getRatings")
+    public String getRatings() {
+        fixtureService.getRatings();
+        return "index";
+    }
 }

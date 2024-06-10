@@ -258,11 +258,11 @@ public class PlayerStatsService {
         }
     }
 
-    private double normalize(double value, double max) {
+    public double normalize(double value, double max) {
         return value / max;
     }
 
-    private double[] calculateWeights(double[] normalizedSums) {
+    public double[] calculateWeights(double[] normalizedSums) {
         double[] weights = new double[normalizedSums.length + 1];
         for (int i = 0; i < normalizedSums.length; i++) {
             weights[i] = 90 / ((normalizedSums[i]));

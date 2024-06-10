@@ -1,14 +1,8 @@
 package com.Football.football.Services;
 
 import com.Football.football.ApiKeyManager;
-import com.Football.football.Repositories.FixtureTeamsStatsRepository;
-import com.Football.football.Repositories.FixturesStatsRepo;
-import com.Football.football.Repositories.PlayersStatsRepo;
-import com.Football.football.Repositories.TeamStatsRepo;
-import com.Football.football.Tables.FixtureTeamsStats;
-import com.Football.football.Tables.FixturesStats;
-import com.Football.football.Tables.PlayerStats;
-import com.Football.football.Tables.TeamStats;
+import com.Football.football.Repositories.*;
+import com.Football.football.Tables.*;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -24,7 +18,9 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 @Service
 @RequiredArgsConstructor
@@ -32,8 +28,12 @@ public class FixturesService {
     private final FixturesStatsRepo fixtureRepository;
     private final ApiKeyManager apiKeyManager;
     private final TeamStatsRepo teamStatsRepo;
+    private final TeamStatsService teamStatsService;
     private final PlayersStatsRepo playersStatsRepo;
     private final FixtureTeamsStatsRepository fixtureTeamsStatsRepository;
+    private final PlayerStatsService playerStatsService;
+    private final FixturesTeamGroupRepo fixturesTeamGroupRepo;
+    private final FixtureRatingRepo fixtureRatingRepo;
     private HttpClient httpClient = HttpClient.newHttpClient();
 
     public void saveAllFixtures(Long leagueId, Long year) throws IOException, InterruptedException, JSONException {
@@ -270,13 +270,14 @@ public class FixturesService {
         List<Integer> fixturesId = fixtureRepository.getAllFixturesIDs();
         int finish = fixturesId.size();
         int loading = finish / 100;
+        int process = loading;
         int processing = 0;
         int i = 1;
         for (int fID : fixturesId) {
             findFixtureAndSaveByTeam(fID);
             processing++;
             if (loading < processing) {
-                loading += loading;
+                loading += process;
                 System.out.println(i + "%...");
                 i += 1;
             }
@@ -371,5 +372,232 @@ public class FixturesService {
         fts.setKeyPasses(keyPasses / summary);
 
         fixtureTeamsStatsRepository.save(fts);
+    }
+
+    public void groupAllTeams() {
+        Iterable<FixtureTeamsStats> allFixtures = fixtureTeamsStatsRepository.findAll();
+
+        double sumPasses = 0, sumKeyPasses = 0, sumAccuratePasses = 0, sumDribbleWon = 0,
+                sumDribbles = 0, sumShootsOnGoal = 0, sumOffsides = 0, sumTrackles = 0,
+                sumShoots = 0, sumFoulsCommited = 0, sumRedCards = 0, sumYellowCards = 0,
+                sumDuelsLoss = 0, sumInterpWon = 0, sumBlocks = 0,
+                sumFoulsDrawn = 0, sumgoalsConceded = 0, sumDuelsWon = 0, sumGoals = 0,
+                sumAsists = 0, sumRecords = 0;
+
+        for (FixtureTeamsStats fixture : allFixtures) {
+            sumRecords++;
+            sumPasses += fixture.getPasses();
+            sumAccuratePasses += fixture.getAccuracyPasses();
+            sumKeyPasses += fixture.getKeyPasses();
+            sumDribbleWon += fixture.getDribblesWon();
+            sumDribbles += fixture.getDribbles();
+            sumShootsOnGoal += fixture.getShotsOnGoal();
+            sumShoots += fixture.getShots();
+            sumFoulsCommited += fixture.getFoulsCommited();
+            sumFoulsDrawn += fixture.getFoulsDrawn();
+            sumRedCards += fixture.getRedCards();
+            sumYellowCards += fixture.getYellowCards();
+            sumDuelsLoss += (fixture.getDuels() - fixture.getDuelsWon());
+            sumInterpWon += fixture.getInterceptions();
+            sumDuelsWon += fixture.getDuelsWon();
+            sumGoals += fixture.getGoals();
+            sumAsists += fixture.getAsists();
+            sumTrackles += fixture.getTotalTackles();
+            sumBlocks += fixture.getBlocks();
+            sumOffsides += fixture.getOffside();
+            sumgoalsConceded += fixture.getGoalsConceded();
+        }
+
+        double[] normalizedSums  ={
+            sumPasses /= sumRecords, // 0
+            sumAccuratePasses /= sumRecords, // 1
+            sumKeyPasses /= sumRecords, // 2
+            sumDribbleWon /= sumRecords, // 3
+            sumDribbles /= sumRecords, // 4
+            sumShootsOnGoal /= sumRecords, // 5
+            sumShoots /= sumRecords, // 6
+            sumFoulsCommited /= sumRecords, // 7
+            sumFoulsDrawn /= sumRecords, // 8
+            sumRedCards /= sumRecords, // 9
+            sumYellowCards /= sumRecords, // 10
+            sumDuelsLoss /= sumRecords, // 11
+            sumInterpWon /= sumRecords, // 12
+            sumDuelsWon /= sumRecords, // 13
+            sumGoals /= sumRecords, // 14
+            sumAsists /= sumRecords, // 15
+            sumTrackles /= sumRecords, // 16
+            sumBlocks /= sumRecords, // 17
+            sumOffsides /= sumRecords, // 18
+            sumgoalsConceded /= sumRecords // 19
+        };
+
+        double[] weights = playerStatsService.calculateWeights(normalizedSums);
+
+        calculateStatsAndSave(weights, allFixtures);
+
+    }
+
+    private void calculateStatsAndSave(double[] weights, Iterable<FixtureTeamsStats> allFixtures) {
+        double maxPasses = 1, maxKeyPasses = 1, maxAccuratePasses = 1, maxDribbleWon = 1,
+                maxDribbles = 1, maxShootsOnGoal = 1, maxOffsides = 1, maxTrackles = 1,
+                maxShoots = 1, maxFoulsCommited = 1, maxRedCards = 1, maxYellowCards = 1,
+                maxDuelsLost = 1, maxInterpWon = 1, maxBlocks = 1,
+                maxFoulsDrawn = 1, maxGoalsConceded = 1, maxDuelsWon = 1, maxGoals = 1,
+                maxAsists = 1;
+
+        int fixtureCount = 0;
+
+        for (FixtureTeamsStats fixture : allFixtures) {
+            fixtureCount++;
+            maxPasses = Math.max(fixture.getPasses(), maxPasses);
+            maxAccuratePasses = Math.max(fixture.getAccuracyPasses(), maxAccuratePasses);
+            maxKeyPasses = Math.max(fixture.getKeyPasses(), maxKeyPasses);
+            maxDribbleWon = Math.max(fixture.getDribblesWon(), maxDribbleWon);
+            maxDribbles = Math.max(fixture.getDribbles(), maxDribbles);
+            maxShootsOnGoal = Math.max(fixture.getShotsOnGoal(), maxShootsOnGoal);
+            maxShoots = Math.max(fixture.getShots(), maxShoots);
+            maxFoulsCommited = Math.max(fixture.getFoulsCommited(), maxFoulsCommited);
+            maxFoulsDrawn = Math.max(fixture.getFoulsDrawn(), maxFoulsDrawn);
+            maxRedCards = Math.max(fixture.getRedCards(), maxRedCards);
+            maxYellowCards = Math.max(fixture.getYellowCards(), maxYellowCards);
+            maxDuelsLost = (Math.max(fixture.getDuels() - fixture.getDuelsWon(), maxDuelsLost));
+            maxInterpWon = Math.max(fixture.getInterceptions(), maxInterpWon);
+            maxDuelsWon = Math.max(fixture.getDuelsWon(), maxDuelsWon);
+            maxGoals = Math.max(fixture.getGoals(), maxGoals);
+            maxAsists = Math.max(fixture.getAsists(), maxAsists);
+            maxTrackles = Math.max(fixture.getTotalTackles(), maxTrackles);
+            maxBlocks = Math.max(fixture.getBlocks(), maxBlocks);
+            maxOffsides = Math.max(fixture.getOffside(), maxOffsides);
+            maxGoalsConceded = Math.max(fixture.getGoalsConceded(), maxGoalsConceded);
+        }
+
+        int process = fixtureCount / 100;
+        int onePrc = process;
+        int counter = 0;
+        int i = 0;
+
+        for (FixtureTeamsStats fixture : allFixtures) {
+            FixturesTeamGroup x = new FixturesTeamGroup();
+
+
+            counter++;
+            if(process < counter) {
+                i++;
+                System.out.println(i + "%...");
+                process += onePrc;
+            }
+
+            x.setFixtureDate(fixture.getFixtureDate());
+            x.setFixtureTeamStats(fixture);
+            x.setTeamStats(fixture.getTeamStats());
+            x.setTeamName(fixture.getTeamStats().getTeamName());
+            x.setSeason(fixture.getTeamStats().getSeason());
+
+            double normPasses = fixture.getPasses() / maxPasses;
+            double normAccPasses = fixture.getAccuracyPasses() / maxAccuratePasses;
+            double normKeyPasses = fixture.getPasses() / maxKeyPasses;
+            double normAsists = fixture.getAsists() / maxAsists;
+            double sumPIK = ((normPasses * weights[0]) + (normAccPasses * weights[1]) +
+                    (normKeyPasses * weights[2]) + (normAsists * weights[15]))
+                     / (weights[0] + weights[1] + weights[2] + weights[15]);
+            x.setPodaniaKreatywnosc(sumPIK);
+
+            double normDribblesWon = fixture.getDribblesWon() / maxDribbleWon;
+            double normShootsOnGoal = fixture.getShotsOnGoal() / maxShootsOnGoal;
+            double normGoals = fixture.getGoals() / maxGoals;
+            double normOffsides = fixture.getOffside() / maxOffsides;
+            double sumDIS = ((normDribblesWon * weights[3]) + (normShootsOnGoal * weights[5]) +
+                    (normGoals * weights[14]) - (normOffsides * weights[18]))
+                    / (weights[3] + weights[5] + weights[14] + weights[18]);
+            x.setDryblingSkutecznosc(sumDIS);
+
+            double normFoulsCommited = fixture.getFoulsCommited() / maxFoulsCommited;
+            double normRedCards = fixture.getRedCards() / maxRedCards;
+            double normYellowCards = fixture.getYellowCards() / maxYellowCards;
+            double normDuelsLost = (fixture.getDuels() - fixture.getDuelsWon()) / maxDuelsLost;
+            double normFailTrackles = (fixture.getTotalTackles() - fixture.getInterceptions())
+                    / (maxTrackles - maxInterpWon);
+            double normGoalsConceded = fixture.getGoalsConceded() / maxGoalsConceded;
+            double sumFII = ((normFoulsCommited * weights[7]) + (normRedCards * weights[9]) +
+                    (normYellowCards * weights[10]) + (normDuelsLost * weights[11])
+                    + (normFailTrackles * (weights[16] - weights[12])) + (normGoalsConceded * weights[19]))
+                    / (weights[3] + weights[5] + weights[14] + weights[18]
+                    + (weights[16] - weights[12]) + weights[19]);
+            x.setFizycznoscInterakcje(sumFII);
+
+            double normDuelsWon = fixture.getDuelsWon() / maxDuelsWon;
+            double normInterpWon = fixture.getInterceptions() / maxInterpWon;
+            double normFoulsDrawn = fixture.getFoulsDrawn() / maxFoulsCommited;
+            double normBlocks = fixture.getBlocks() / maxBlocks;
+            double sumOIK = ((normDuelsWon * weights[13]) + (normInterpWon * weights[12]) +
+                    (normFoulsDrawn * weights[8]) + normBlocks * weights[17])
+                    / (weights[13] + weights[12] + weights[8] + weights[17]);
+            x.setObronaKotrolaPrzeciwnika(sumOIK);
+
+            fixturesTeamGroupRepo.save(x);
+        }
+    }
+
+    public void getRatings() {
+        calculateStatsAndSaveRating(fixturesTeamGroupRepo.findAll());
+    }
+
+    private void calculateStatsAndSaveRating(Iterable<FixturesTeamGroup> allTeams) {
+
+        double[] sums = StreamSupport.stream(allTeams.spliterator(), false)
+                .reduce(new double[5], (acc, team) -> {
+                    acc[0] += team.getDryblingSkutecznosc();
+                    acc[1] += team.getPodaniaKreatywnosc();
+                    acc[2] += team.getObronaKotrolaPrzeciwnika();
+                    acc[3] += team.getFizycznoscInterakcje();
+                    acc[4]++;
+                    return acc;
+                }, (a, b) -> {
+                    for (int i = 0; i < a.length; i++) {
+                        a[i] += b[i];
+                    }
+                    return a;
+                });
+
+        double sumDiS = sums[0] / sums[4];
+        double sumPiK = sums[1] / sums[4];
+        double sumOiKK = sums[2] / sums[4];
+        double sumFiI = sums[3] / sums[4];
+
+        double maxStat = Math.max(Math.max(sumDiS, sumPiK), Math.max(sumOiKK, Math.abs(sumFiI)));
+        sumDiS /= maxStat;
+        sumPiK /= maxStat;
+        sumOiKK /= maxStat;
+        sumFiI /= maxStat;
+
+        sumFiI = Math.abs(sumFiI);
+        double[] weights = {sumDiS, sumPiK, sumOiKK, sumFiI};
+
+        allTeams.forEach(team -> {
+            FixturesTeamRating fTeam = getAvgofFixture(team, weights);
+            fixtureRatingRepo.save(fTeam);
+        });
+    }
+
+    private FixturesTeamRating getAvgofFixture(FixturesTeamGroup team, double[] weights) {
+        double summaryWeight = 0.0;
+        summaryWeight += (team.getDryblingSkutecznosc() * weights[0]);
+        summaryWeight += (team.getPodaniaKreatywnosc() * weights[1]);
+        summaryWeight += (team.getObronaKotrolaPrzeciwnika() * weights[2]);
+        summaryWeight += (team.getFizycznoscInterakcje() * weights[3]);
+
+        double sumWeights = 0;
+        for (double weight : weights) {
+            sumWeights += weight;
+        }
+
+        FixturesTeamRating fTeam = new FixturesTeamRating();
+        fTeam.setTeamStats(team.getTeamStats());
+        fTeam.setRaiting(summaryWeight / sumWeights);
+        fTeam.setCzyUwzglednionePozycje(false);
+        fTeam.setFixtureDate(team.getFixtureDate());
+        fTeam.setFixtureTeamStats(team.getFixtureTeamStats());
+
+        return fTeam;
     }
 }

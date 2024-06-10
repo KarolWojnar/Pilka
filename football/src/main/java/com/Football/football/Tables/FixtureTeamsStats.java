@@ -1,10 +1,12 @@
 package com.Football.football.Tables;
 
+import com.Football.football.Repositories.FixturesStatsRepo;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Entity
 @Getter
@@ -75,4 +77,8 @@ public class FixtureTeamsStats {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id druzyny przeciwnika")
     private TeamStats enemyStats;
+    @OneToMany(mappedBy = "fixtureTeamStats", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<FixturesTeamGroup> fixtureStats;
+    @OneToMany(mappedBy = "fixtureTeamStats", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<FixturesTeamRating> fixtureRatingStats;
 }
