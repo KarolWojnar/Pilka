@@ -138,13 +138,6 @@ public class TeamController {
         return "teamView2";
     }
 
-    @GetMapping
-    public String showAvaiableTeams(Model model) {
-        Iterable<TeamStats> teams = teamStatsRepository.getDistinctTeams();
-        model.addAttribute("teams", teams);
-        return "teams";
-    }
-
     @PostMapping("/compareTeams")
     public String compare(@RequestParam("TeamA") Long idA, @RequestParam("TeamB") Long idB, Model model) {
         compareRaiting(model, idA, idB);

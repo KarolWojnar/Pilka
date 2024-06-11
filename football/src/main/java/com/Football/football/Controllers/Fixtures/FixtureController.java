@@ -29,39 +29,15 @@ public class FixtureController {
 
     @PostMapping("/team")
     public String getFixtures(@RequestParam("teamId") long teamId,
-                              @RequestParam("season") long season,
                               @RequestParam("startDate") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
                               @RequestParam("endDate") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
                               Model model) {
-        try {
-            List<PlayerStats> fixtures = fixtureService.getFixturesForTeamAndSeason(teamId, season, startDate.atStartOfDay(), endDate.atStartOfDay());
-            model.addAttribute("players", fixtures);
-        } catch (Exception e) {
-            model.addAttribute("error", "Error retrieving fixtures: " + e.getMessage());
-        }
+        fixtureService.getRatingsByDateAndTeamId(teamId, startDate, endDate, model);
         return "fixtures";
     }
 
     @GetMapping
     public String getFixtureView() {
         return "fixtures";
-    }
-
-    @GetMapping("/sumByFixture")
-    public String sumByFixture(Model model) {
-        fixtureService.sumFixturesByTeam();
-        return "index";
-    }
-
-    @GetMapping("/groupAll")
-    public String groupAll(Model model) {
-        fixtureService.groupAllTeams();
-        return "index";
-    }
-
-    @GetMapping("/getRatings")
-    public String getRatings() {
-        fixtureService.getRatings();
-        return "index";
     }
 }

@@ -6,10 +6,14 @@ import com.Football.football.Tables.*;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+
+import java.time.Duration;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import org.springframework.stereotype.Service;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.ui.Model;
 
 import java.io.IOException;
 import java.net.URI;
@@ -17,9 +21,10 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
-import java.util.function.Supplier;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import java.util.stream.StreamSupport;
 
 @Service
@@ -268,19 +273,8 @@ public class FixturesService {
 
     public void sumFixturesByTeam() {
         List<Integer> fixturesId = fixtureRepository.getAllFixturesIDs();
-        int finish = fixturesId.size();
-        int loading = finish / 100;
-        int process = loading;
-        int processing = 0;
-        int i = 1;
         for (int fID : fixturesId) {
             findFixtureAndSaveByTeam(fID);
-            processing++;
-            if (loading < processing) {
-                loading += process;
-                System.out.println(i + "%...");
-                i += 1;
-            }
         }
     }
 
@@ -374,9 +368,7 @@ public class FixturesService {
         fixtureTeamsStatsRepository.save(fts);
     }
 
-    public void groupAllTeams() {
-        Iterable<FixtureTeamsStats> allFixtures = fixtureTeamsStatsRepository.findAll();
-
+    public List<FixturesTeamGroup> groupAllTeams(Iterable<FixtureTeamsStats> allFixtures, boolean addToDb) {
         double sumPasses = 0, sumKeyPasses = 0, sumAccuratePasses = 0, sumDribbleWon = 0,
                 sumDribbles = 0, sumShootsOnGoal = 0, sumOffsides = 0, sumTrackles = 0,
                 sumShoots = 0, sumFoulsCommited = 0, sumRedCards = 0, sumYellowCards = 0,
@@ -433,11 +425,11 @@ public class FixturesService {
 
         double[] weights = playerStatsService.calculateWeights(normalizedSums);
 
-        calculateStatsAndSave(weights, allFixtures);
+        return calculateStatsAndSave(weights, allFixtures, addToDb);
 
     }
 
-    private void calculateStatsAndSave(double[] weights, Iterable<FixtureTeamsStats> allFixtures) {
+    private List<FixturesTeamGroup> calculateStatsAndSave(double[] weights, Iterable<FixtureTeamsStats> allFixtures, boolean addToDB) {
         double maxPasses = 1, maxKeyPasses = 1, maxAccuratePasses = 1, maxDribbleWon = 1,
                 maxDribbles = 1, maxShootsOnGoal = 1, maxOffsides = 1, maxTrackles = 1,
                 maxShoots = 1, maxFoulsCommited = 1, maxRedCards = 1, maxYellowCards = 1,
@@ -471,21 +463,11 @@ public class FixturesService {
             maxGoalsConceded = Math.max(fixture.getGoalsConceded(), maxGoalsConceded);
         }
 
-        int process = fixtureCount / 100;
-        int onePrc = process;
-        int counter = 0;
-        int i = 0;
+        List<FixturesTeamGroup> teamsToReturn = new ArrayList<>();
+
 
         for (FixtureTeamsStats fixture : allFixtures) {
             FixturesTeamGroup x = new FixturesTeamGroup();
-
-
-            counter++;
-            if(process < counter) {
-                i++;
-                System.out.println(i + "%...");
-                process += onePrc;
-            }
 
             x.setFixtureDate(fixture.getFixtureDate());
             x.setFixtureTeamStats(fixture);
@@ -534,15 +516,21 @@ public class FixturesService {
                     / (weights[13] + weights[12] + weights[8] + weights[17]);
             x.setObronaKotrolaPrzeciwnika(sumOIK);
 
-            fixturesTeamGroupRepo.save(x);
+
+            if (addToDB) {
+                fixturesTeamGroupRepo.save(x);
+            } else {
+                teamsToReturn.add(x);
+            }
         }
+        return teamsToReturn;
     }
 
-    public void getRatings() {
-        calculateStatsAndSaveRating(fixturesTeamGroupRepo.findAll());
+    public List<FixturesTeamRating> getRatings(List<FixturesTeamGroup> all, boolean saveToDB) {
+        return calculateStatsAndSaveRating(all, saveToDB);
     }
 
-    private void calculateStatsAndSaveRating(Iterable<FixturesTeamGroup> allTeams) {
+    private List<FixturesTeamRating> calculateStatsAndSaveRating(Iterable<FixturesTeamGroup> allTeams, boolean saveToDB) {
 
         double[] sums = StreamSupport.stream(allTeams.spliterator(), false)
                 .reduce(new double[5], (acc, team) -> {
@@ -573,10 +561,17 @@ public class FixturesService {
         sumFiI = Math.abs(sumFiI);
         double[] weights = {sumDiS, sumPiK, sumOiKK, sumFiI};
 
+        List<FixturesTeamRating> teamsToReturn = new ArrayList<>();
+
         allTeams.forEach(team -> {
             FixturesTeamRating fTeam = getAvgofFixture(team, weights);
-            fixtureRatingRepo.save(fTeam);
+            if (saveToDB) {
+                fixtureRatingRepo.save(fTeam);
+            } else {
+                teamsToReturn.add(fTeam);
+            }
         });
+        return teamsToReturn;
     }
 
     private FixturesTeamRating getAvgofFixture(FixturesTeamGroup team, double[] weights) {
@@ -599,5 +594,65 @@ public class FixturesService {
         fTeam.setFixtureTeamStats(team.getFixtureTeamStats());
 
         return fTeam;
+    }
+
+    public void getRatingsByDateAndTeamId(long teamId, LocalDate startDate, LocalDate endDate, Model model) {
+        List<FixtureTeamsStats> tfS = fixtureTeamsStatsRepository.findAllByFixtureDateBetween(startDate.atStartOfDay(), endDate.atStartOfDay());
+        List<FixturesTeamGroup> ftg = groupAllTeams(tfS, false);
+        List<FixturesTeamRating> ftr = getRatings(ftg, false);
+        List<FixturesTeamRating> myTeam = ftr.stream()
+                .filter(team -> team.getTeamStats().getTeamId() == teamId)
+                .toList();
+
+        int numberOfPeriods = 10;
+        long daysBetween = ChronoUnit.DAYS.between(startDate, endDate);
+        long daysPerPeriod = daysBetween / numberOfPeriods;
+
+        List<Double> avgRatings = new ArrayList<>(Collections.nCopies(numberOfPeriods, 0.0));
+        List<Double> myTeamRatings = new ArrayList<>(Collections.nCopies(numberOfPeriods, 0.0));
+
+        for (int i = 0; i < numberOfPeriods; i++) {
+            LocalDate periodStartDate = startDate.plusDays(i * daysPerPeriod);
+            LocalDate periodEndDate = periodStartDate.plusDays(daysPerPeriod);
+
+            double periodAverage = calculatePeriodAverage(myTeam, periodStartDate, periodEndDate);
+            double periodAverage2 = calculatePeriodAverage(ftr, periodStartDate, periodEndDate);
+            avgRatings.set(i, periodAverage2);
+
+            if (periodAverage != 0.0) {
+                myTeamRatings.set(i, periodAverage);
+            }
+        }
+
+        List<String> dates = new ArrayList<>();
+        for (int i = 0; i < numberOfPeriods; i++) {
+            LocalDate periodStartDate = startDate.plusDays(i * daysPerPeriod);
+            dates.add(periodStartDate.toString());
+        }
+
+        model.addAttribute("dates", dates);
+        System.out.println(dates);
+        System.out.println(myTeamRatings);
+        System.out.println(avgRatings);
+        System.out.println(myTeam.getFirst().getTeamStats().getTeamName());
+        model.addAttribute("myTeamRatings", myTeamRatings);
+        if (!myTeam.isEmpty()) {
+            model.addAttribute("teamName", myTeam.getFirst().getTeamStats().getTeamName());
+        } else {
+            model.addAttribute("teamName", "Unknown Team");
+        }
+        model.addAttribute("averageRatings", avgRatings);
+    }
+
+    private double calculatePeriodAverage(List<FixturesTeamRating> teamRatings, LocalDate periodStartDate, LocalDate periodEndDate) {
+        List<FixturesTeamRating> matchesInPeriod = teamRatings.stream()
+                .filter(team -> !team.getFixtureDate().toLocalDate().isBefore(periodStartDate) &&
+                        !team.getFixtureDate().toLocalDate().isAfter(periodEndDate))
+                .collect(Collectors.toList());
+        if (matchesInPeriod.isEmpty()) {
+            return 0.0; // Jeśli nie ma meczów w danym okresie, zwracamy 0 jako średnią ocenę
+        } else {
+            return matchesInPeriod.stream().mapToDouble(FixturesTeamRating::getRaiting).average().orElse(0.0);
+        }
     }
 }

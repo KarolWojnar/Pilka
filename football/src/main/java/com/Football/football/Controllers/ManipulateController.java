@@ -1,11 +1,19 @@
 package com.Football.football.Controllers;
 
+import com.Football.football.Repositories.FixtureTeamsStatsRepository;
+import com.Football.football.Repositories.FixturesTeamGroupRepo;
 import com.Football.football.Repositories.PlayersStatsRepo;
+import com.Football.football.Services.FixturesService;
 import com.Football.football.Services.PlayerStatsService;
 import com.Football.football.Services.TeamStatsService;
+import com.Football.football.Tables.FixtureTeamsStats;
+import com.Football.football.Tables.FixturesTeamGroup;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
+
+import java.util.List;
 
 @Controller
 @RequiredArgsConstructor
@@ -14,6 +22,9 @@ public class ManipulateController {
     private final PlayerStatsService playerStatsService;
     private final TeamStatsService teamStatsService;
     private final PlayersStatsRepo statystykiZawodnikaRepository;
+    private final FixturesService fixtureService;
+    private final FixtureTeamsStatsRepository fixtureTeamsStatsRepository;
+    private final FixturesTeamGroupRepo fixturesTeamGroupRepo;
 
     @GetMapping("/get-avg")
     public String getAvg() {
@@ -47,6 +58,25 @@ public class ManipulateController {
     @GetMapping("/get-avg-of-summary-by-possition")
     public String getAvgOfSummaryWithPos() {
         teamStatsService.getSumSumWPos();
+        return "index";
+    }
+
+    @GetMapping("/sumByFixture")
+    public String sumByFixture(Model model) {
+        fixtureService.sumFixturesByTeam();
+        return "index";
+    }
+
+    @GetMapping("/groupAll")
+    public String groupAll() {
+        Iterable<FixtureTeamsStats> allFixtures = fixtureTeamsStatsRepository.findAll();
+        fixtureService.groupAllTeams(allFixtures, true);
+        return "index";
+    }
+
+    @GetMapping("/getRatings")
+    public String getRatings() {
+        fixtureService.getRatings((List<FixturesTeamGroup>) fixturesTeamGroupRepo.findAll(), true);
         return "index";
     }
 }
