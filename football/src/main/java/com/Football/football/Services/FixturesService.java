@@ -596,7 +596,7 @@ public class FixturesService {
         return fTeam;
     }
 
-    public void getRatingsByDateAndTeamId(long teamId, LocalDate startDate, LocalDate endDate, Model model) {
+    public void getRatingsByDateAndTeamId(long teamId, LocalDate startDate, LocalDate endDate, String rounding, Model model) {
         List<FixtureTeamsStats> tfS = fixtureTeamsStatsRepository.findAllByFixtureDateBetween(startDate.atStartOfDay(), endDate.atStartOfDay());
         List<FixturesTeamGroup> ftg = groupAllTeams(tfS, false);
         List<FixturesTeamRating> ftr = getRatings(ftg, false);
@@ -604,16 +604,27 @@ public class FixturesService {
                 .filter(team -> team.getTeamStats().getTeamId() == teamId)
                 .toList();
 
-        int numberOfPeriods = 10;
-        long daysBetween = ChronoUnit.DAYS.between(startDate, endDate);
-        long daysPerPeriod = daysBetween / numberOfPeriods;
+        List<LocalDate> periodStartDates = new ArrayList<>();
+        LocalDate periodStartDate = startDate;
 
-        List<Double> avgRatings = new ArrayList<>(Collections.nCopies(numberOfPeriods, 0.0));
-        List<Double> myTeamRatings = new ArrayList<>(Collections.nCopies(numberOfPeriods, 0.0));
+        if ("week".equals(rounding)) {
+            while (!periodStartDate.isAfter(endDate)) {
+                periodStartDates.add(periodStartDate);
+                periodStartDate = periodStartDate.plusWeeks(1);
+            }
+        } else if ("month".equals(rounding)) {
+            while (!periodStartDate.isAfter(endDate)) {
+                periodStartDates.add(periodStartDate);
+                periodStartDate = periodStartDate.plusMonths(1);
+            }
+        }
 
-        for (int i = 0; i < numberOfPeriods; i++) {
-            LocalDate periodStartDate = startDate.plusDays(i * daysPerPeriod);
-            LocalDate periodEndDate = periodStartDate.plusDays(daysPerPeriod);
+        List<Double> avgRatings = new ArrayList<>(Collections.nCopies(periodStartDates.size(), 0.0));
+        List<Double> myTeamRatings = new ArrayList<>(Collections.nCopies(periodStartDates.size(), 0.0));
+
+        for (int i = 0; i < periodStartDates.size(); i++) {
+            periodStartDate = periodStartDates.get(i);
+            LocalDate periodEndDate = (i == periodStartDates.size() - 1) ? endDate : periodStartDates.get(i + 1).minusDays(1);
 
             double periodAverage = calculatePeriodAverage(myTeam, periodStartDate, periodEndDate);
             double periodAverage2 = calculatePeriodAverage(ftr, periodStartDate, periodEndDate);
@@ -624,24 +635,22 @@ public class FixturesService {
             }
         }
 
-        List<String> dates = new ArrayList<>();
-        for (int i = 0; i < numberOfPeriods; i++) {
-            LocalDate periodStartDate = startDate.plusDays(i * daysPerPeriod);
-            dates.add(periodStartDate.toString());
-        }
-
-        model.addAttribute("dates", dates);
+        List<String> dates = periodStartDates.stream().map(LocalDate::toString).collect(Collectors.toList());
+        dates.removeLast();
+        myTeamRatings.removeLast();
+        avgRatings.removeLast();
         System.out.println(dates);
         System.out.println(myTeamRatings);
         System.out.println(avgRatings);
-        System.out.println(myTeam.getFirst().getTeamStats().getTeamName());
+
+        model.addAttribute("dates", dates);
         model.addAttribute("myTeamRatings", myTeamRatings);
+        model.addAttribute("averageRatings", avgRatings);
         if (!myTeam.isEmpty()) {
-            model.addAttribute("teamName", myTeam.getFirst().getTeamStats().getTeamName());
+            model.addAttribute("teamName", myTeam.get(0).getTeamStats().getTeamName());
         } else {
             model.addAttribute("teamName", "Unknown Team");
         }
-        model.addAttribute("averageRatings", avgRatings);
     }
 
     private double calculatePeriodAverage(List<FixturesTeamRating> teamRatings, LocalDate periodStartDate, LocalDate periodEndDate) {
@@ -655,4 +664,5 @@ public class FixturesService {
             return matchesInPeriod.stream().mapToDouble(FixturesTeamRating::getRaiting).average().orElse(0.0);
         }
     }
+
 }

@@ -19,13 +19,22 @@
             <label for="teamId" class="block text-gray-300 text-sm font-bold mb-2">ID:</label>
             <input required type="number" id="teamId" name="teamId" class="text-1xl shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
         </div>
-        <div class="mb-4">
-            <label for="startDate" class="block text-gray-300 text-sm font-bold mb-2">Data rozpoczęcia:</label>
-            <input required type="date" id="startDate" name="startDate" class="text-1xl shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+        <div class="mb-4 flex space-x-4">
+            <div class="w-1/2">
+                <label for="startDate" class="block text-gray-300 text-sm font-bold mb-2">Data rozpoczęcia:</label>
+                <input required type="date" id="startDate" name="startDate" class="text-1xl shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+            </div>
+            <div class="w-1/2">
+                <label for="endDate" class="block text-gray-300 text-sm font-bold mb-2">Data zakończenia:</label>
+                <input required type="date" id="endDate" name="endDate" class="text-1xl shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+            </div>
         </div>
         <div class="mb-4">
-            <label for="endDate" class="block text-gray-300 text-sm font-bold mb-2">Data zakończenia:</label>
-            <input required type="date" id="endDate" name="endDate" class="text-1xl shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+            <label for="rounding" class="block text-gray-300 text-sm font-bold mb-2">Zaokrąglanie do:</label>
+            <select id="rounding" name="rounding" class="text-1xl shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+                <option value="week">Tydzień</option>
+                <option value="month">Miesiąc</option>
+            </select>
         </div>
         <div class="flex justify-center">
             <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">Submit</button>
@@ -34,58 +43,73 @@
     <div th:if="${error}" class="mt-4 text-red-500 text-center">
         <p th:text="${error}"></p>
     </div>
-    <div class="mt-8 bg-gray-900">
-        <h2 class="text-xl font-bold text-white mb-4">Statystyki drużyn:</h2>
-        <canvas id="teamChart" width="400" height="200"></canvas>
-        <script>
+    <div class="mt-8 bg-gray-900"
+         th:data-dates="${dates.toString()}"
+    th:data-my-team-ratings="${myTeamRatings.toString()}"
+    th:data-average-ratings="${averageRatings.toString()}"
+    th:data-team-name="${teamName}">
+    <h2 class="text-xl font-bold text-white mb-4">Statystyki drużyn:</h2>
+    <canvas id="teamChart" width="400" height="200"></canvas>
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
             const datesJson = document.querySelector('.mt-8').dataset.dates;
             const myTeamRatingsJson = document.querySelector('.mt-8').dataset.myTeamRatings;
             const averageRatingsJson = document.querySelector('.mt-8').dataset.averageRatings;
             const teamNameJson = document.querySelector('.mt-8').dataset.teamName;
 
-            const labels = JSON.parse(datesJson);
-            const myTeamData = JSON.parse(myTeamRatingsJson);
-            const averageTeamData = JSON.parse(averageRatingsJson);
-            const teamName = JSON.parse(teamNameJson);
+            console.log('Raw dates JSON:', datesJson);
+            console.log('Raw my team ratings JSON:', myTeamRatingsJson);
+            console.log('Raw average ratings JSON:', averageRatingsJson);
+            console.log('Raw team name JSON:', teamNameJson);
 
-            console.log('labels:', labels);
-            console.log('myTeamData:', myTeamData);
-            console.log('averageTeamData:', averageTeamData);
-            console.log('teamName:', teamName);
+            try {
+                const labels = JSON.parse(datesJson.toString());
+                const myTeamData = JSON.parse(myTeamRatingsJson);
+                const averageTeamData = JSON.parse(averageRatingsJson);
+                const teamName = teamNameJson;
 
-            if (labels.length === 0 || myTeamData.length === 0 || averageTeamData.length === 0) {
-                console.log('Brak danych do wyświetlenia na wykresie');
-            }
+                console.log('Parsed labels:', labels);
+                console.log('Parsed my team data:', myTeamData);
+                console.log('Parsed average team data:', averageTeamData);
+                console.log('Parsed team name:', teamName);
 
-            const ctx = document.getElementById('teamChart').getContext('2d');
-            new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        label: teamName,
-                        data: myTeamData,
-                        borderColor: 'rgba(75, 192, 192, 1)',
-                        borderWidth: 1,
-                        fill: false
-                    }, {
-                        label: 'Średnia wszystkich drużyn',
-                        data: averageTeamData,
-                        borderColor: 'rgba(153, 102, 255, 1)',
-                        borderWidth: 1,
-                        fill: false
-                    }]
-                },
-                options: {
-                    scales: {
-                        y: {
-                            beginAtZero: true
+                if (labels.length === 0 || myTeamData.length === 0 || averageTeamData.length === 0) {
+                    console.log('Brak danych do wyświetlenia na wykresie');
+                } else {
+                    const ctx = document.getElementById('teamChart').getContext('2d');
+                    new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: labels,
+                            datasets: [{
+                                label: teamName,
+                                data: myTeamData,
+                                borderColor: 'rgba(75, 192, 192, 1)',
+                                borderWidth: 1,
+                                fill: false
+                            }, {
+                                label: 'Średnia wszystkich drużyn',
+                                data: averageTeamData,
+                                borderColor: 'rgba(153, 102, 255, 1)',
+                                borderWidth: 1,
+                                fill: false
+                            }]
+                        },
+                        options: {
+                            scales: {
+                                y: {
+                                    beginAtZero: true
+                                }
+                            }
                         }
-                    }
+                    });
                 }
-            });
-        </script>
-    </div>
+            } catch (error) {
+                console.error('Error parsing JSON:', error);
+            }
+        });
+    </script>
+</div>
 </div>
 </body>
 </html>

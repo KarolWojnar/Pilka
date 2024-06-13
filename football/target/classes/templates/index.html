@@ -28,15 +28,13 @@
             </thead>
             <tbody>
             <tr class="text-xl text-center hover:bg-blue-300" th:each="team : ${teams}">
-                <td th:text="${team.teamId}"></td>
+                <td th:text="${team.id}"></td>
                 <td>
-                    <a class="font-bold text-emerald-700" th:href="@{/teams/{id}/{year}(id=${team.teamId}, year=${team.season})}" th:text="${team.teamName}"></a>
+                    <a class="font-bold text-emerald-700" th:href="@{/teams/{id}/{year}(id=${team.id}, year=${team.season})}" th:text="${team.teamName}"></a>
                 </td>
                 <td th:text="${team.season}"></td>
                 <td>
-                    <span th:each="league : ${leagues}">
-                        <span th:if="${league.leagueId == team.leagueId}" th:text="${league.leagueName}"></span>
-                    </span>
+                        <span th:text="${team.teamStats.leagues.leagueName}"></span>
                 </td>
             </tr>
             </tbody>

@@ -76,9 +76,9 @@
                 </thead>
                 <tbody>
                 <tr class="text-xl text-center hover:bg-blue-300" th:each="player : ${playersByTeam}">
-                    <td th:text="${player.playerId}"></td>
+                    <td th:text="${player.id}"></td>
                     <td>
-                        <a class="font-bold text-emerald-700" th:href="@{/player/{id}/{year}(id=${player.playerId}, year=${player.season})}" th:text="${player.imie}"></a>
+                        <a class="font-bold text-emerald-700" th:href="@{/player/{id}/{year}(id=${player.id}, year=${player.season})}" th:text="${player.get}"></a>
                     </td>
                     <td th:text="${player.pozycja}"></td>
                 </tr>

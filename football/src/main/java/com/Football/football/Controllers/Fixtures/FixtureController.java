@@ -31,8 +31,9 @@ public class FixtureController {
     public String getFixtures(@RequestParam("teamId") long teamId,
                               @RequestParam("startDate") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
                               @RequestParam("endDate") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
+                              @RequestParam("rounding") String rounding,
                               Model model) {
-        fixtureService.getRatingsByDateAndTeamId(teamId, startDate, endDate, model);
+        fixtureService.getRatingsByDateAndTeamId(teamId, startDate, endDate, rounding, model);
         return "fixtures";
     }
 
