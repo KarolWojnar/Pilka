@@ -3,6 +3,7 @@ package com.Football.football.Controllers.Fixtures;
 import com.Football.football.Services.FixturesService;
 import com.Football.football.Tables.FixturesStats;
 import com.Football.football.Tables.PlayerStats;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import lombok.RequiredArgsConstructor;
 import org.json.JSONException;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -32,7 +33,7 @@ public class FixtureController {
                               @RequestParam("startDate") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
                               @RequestParam("endDate") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
                               @RequestParam("rounding") String rounding,
-                              Model model) {
+                              Model model) throws JsonProcessingException {
         fixtureService.getRatingsByDateAndTeamId(teamId, startDate, endDate, rounding, model);
         return "fixtures";
     }

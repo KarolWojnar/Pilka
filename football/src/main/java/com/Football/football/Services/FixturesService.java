@@ -3,6 +3,8 @@ package com.Football.football.Services;
 import com.Football.football.ApiKeyManager;
 import com.Football.football.Repositories.*;
 import com.Football.football.Tables.*;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -596,7 +598,7 @@ public class FixturesService {
         return fTeam;
     }
 
-    public void getRatingsByDateAndTeamId(long teamId, LocalDate startDate, LocalDate endDate, String rounding, Model model) {
+    public void getRatingsByDateAndTeamId(long teamId, LocalDate startDate, LocalDate endDate, String rounding, Model model) throws JsonProcessingException {
         List<FixtureTeamsStats> tfS = fixtureTeamsStatsRepository.findAllByFixtureDateBetween(startDate.atStartOfDay(), endDate.atStartOfDay());
         List<FixturesTeamGroup> ftg = groupAllTeams(tfS, false);
         List<FixturesTeamRating> ftr = getRatings(ftg, false);
@@ -639,11 +641,16 @@ public class FixturesService {
         dates.removeLast();
         myTeamRatings.removeLast();
         avgRatings.removeLast();
-        System.out.println(dates);
+
+        ObjectMapper objectMapper = new ObjectMapper();
+        String datesJson = objectMapper.writeValueAsString(dates);
+
+
+        System.out.println(datesJson);
         System.out.println(myTeamRatings);
         System.out.println(avgRatings);
 
-        model.addAttribute("dates", dates);
+        model.addAttribute("datesJson", datesJson);
         model.addAttribute("myTeamRatings", myTeamRatings);
         model.addAttribute("averageRatings", avgRatings);
         if (!myTeam.isEmpty()) {
