@@ -29,12 +29,12 @@ public class FixtureController {
     }
 
     @PostMapping("/team")
-    public String getFixtures(@RequestParam("teamId") long teamId,
+    public String getFixtures(@RequestParam("teamName") String teamName,
                               @RequestParam("startDate") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
                               @RequestParam("endDate") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
                               @RequestParam("rounding") String rounding,
                               Model model) throws JsonProcessingException {
-        fixtureService.getRatingsByDateAndTeamId(teamId, startDate, endDate, rounding, model);
+        fixtureService.getRatingsByDateAndTeamId(teamName, startDate, endDate, rounding, model);
         return "fixtures";
     }
 

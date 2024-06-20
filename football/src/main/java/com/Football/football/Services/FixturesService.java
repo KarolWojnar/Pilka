@@ -598,65 +598,72 @@ public class FixturesService {
         return fTeam;
     }
 
-    public void getRatingsByDateAndTeamId(long teamId, LocalDate startDate, LocalDate endDate, String rounding, Model model) throws JsonProcessingException {
+    public void getRatingsByDateAndTeamId(String teamName, LocalDate startDate, LocalDate endDate, String rounding, Model model) throws JsonProcessingException {
         List<FixtureTeamsStats> tfS = fixtureTeamsStatsRepository.findAllByFixtureDateBetween(startDate.atStartOfDay(), endDate.atStartOfDay());
-        List<FixturesTeamGroup> ftg = groupAllTeams(tfS, false);
-        List<FixturesTeamRating> ftr = getRatings(ftg, false);
-        List<FixturesTeamRating> myTeam = ftr.stream()
-                .filter(team -> team.getTeamStats().getTeamId() == teamId)
-                .toList();
+        Optional<Long> teamOp = fixtureTeamsStatsRepository.findIdTeam(teamName);
+        if (teamOp.isPresent()) {
+            System.out.println(teamOp.get());
+            long teamId = teamOp.get();
+            List<FixturesTeamGroup> ftg = groupAllTeams(tfS, false);
+            List<FixturesTeamRating> ftr = getRatings(ftg, false);
+            List<FixturesTeamRating> myTeam = ftr.stream()
+                    .filter(team -> team.getTeamStats().getTeamId() == teamId)
+                    .toList();
 
-        List<LocalDate> periodStartDates = new ArrayList<>();
-        LocalDate periodStartDate = startDate;
+            List<LocalDate> periodStartDates = new ArrayList<>();
+            LocalDate periodStartDate = startDate;
 
-        if ("week".equals(rounding)) {
-            while (!periodStartDate.isAfter(endDate)) {
-                periodStartDates.add(periodStartDate);
-                periodStartDate = periodStartDate.plusWeeks(1);
+            if ("week".equals(rounding)) {
+                while (!periodStartDate.isAfter(endDate)) {
+                    periodStartDates.add(periodStartDate);
+                    periodStartDate = periodStartDate.plusWeeks(1);
+                }
+            } else if ("month".equals(rounding)) {
+                while (!periodStartDate.isAfter(endDate)) {
+                    periodStartDates.add(periodStartDate);
+                    periodStartDate = periodStartDate.plusMonths(1);
+                }
             }
-        } else if ("month".equals(rounding)) {
-            while (!periodStartDate.isAfter(endDate)) {
-                periodStartDates.add(periodStartDate);
-                periodStartDate = periodStartDate.plusMonths(1);
+
+            List<Double> avgRatings = new ArrayList<>(Collections.nCopies(periodStartDates.size(), 0.0));
+            List<Double> myTeamRatings = new ArrayList<>(Collections.nCopies(periodStartDates.size(), 0.0));
+
+            for (int i = 0; i < periodStartDates.size(); i++) {
+                periodStartDate = periodStartDates.get(i);
+                LocalDate periodEndDate = (i == periodStartDates.size() - 1) ? endDate : periodStartDates.get(i + 1).minusDays(1);
+
+                double periodAverage = calculatePeriodAverage(myTeam, periodStartDate, periodEndDate);
+                double periodAverage2 = calculatePeriodAverage(ftr, periodStartDate, periodEndDate);
+                avgRatings.set(i, periodAverage2);
+
+                if (periodAverage != 0.0) {
+                    myTeamRatings.set(i, periodAverage);
+                }
             }
-        }
 
-        List<Double> avgRatings = new ArrayList<>(Collections.nCopies(periodStartDates.size(), 0.0));
-        List<Double> myTeamRatings = new ArrayList<>(Collections.nCopies(periodStartDates.size(), 0.0));
+            List<String> dates = periodStartDates.stream().map(LocalDate::toString).collect(Collectors.toList());
+            dates.removeLast();
+            myTeamRatings.removeLast();
+            avgRatings.removeLast();
 
-        for (int i = 0; i < periodStartDates.size(); i++) {
-            periodStartDate = periodStartDates.get(i);
-            LocalDate periodEndDate = (i == periodStartDates.size() - 1) ? endDate : periodStartDates.get(i + 1).minusDays(1);
+            ObjectMapper objectMapper = new ObjectMapper();
+            String datesJson = objectMapper.writeValueAsString(dates);
 
-            double periodAverage = calculatePeriodAverage(myTeam, periodStartDate, periodEndDate);
-            double periodAverage2 = calculatePeriodAverage(ftr, periodStartDate, periodEndDate);
-            avgRatings.set(i, periodAverage2);
 
-            if (periodAverage != 0.0) {
-                myTeamRatings.set(i, periodAverage);
+            System.out.println(datesJson);
+            System.out.println(myTeamRatings);
+            System.out.println(avgRatings);
+
+            model.addAttribute("datesJson", datesJson);
+            model.addAttribute("myTeamRatings", myTeamRatings);
+            model.addAttribute("averageRatings", avgRatings);
+            if (!myTeam.isEmpty()) {
+                model.addAttribute("teamName", myTeam.get(0).getTeamStats().getTeamName());
+            } else {
+                model.addAttribute("teamName", "Unknown Team");
             }
-        }
-
-        List<String> dates = periodStartDates.stream().map(LocalDate::toString).collect(Collectors.toList());
-        dates.removeLast();
-        myTeamRatings.removeLast();
-        avgRatings.removeLast();
-
-        ObjectMapper objectMapper = new ObjectMapper();
-        String datesJson = objectMapper.writeValueAsString(dates);
-
-
-        System.out.println(datesJson);
-        System.out.println(myTeamRatings);
-        System.out.println(avgRatings);
-
-        model.addAttribute("datesJson", datesJson);
-        model.addAttribute("myTeamRatings", myTeamRatings);
-        model.addAttribute("averageRatings", avgRatings);
-        if (!myTeam.isEmpty()) {
-            model.addAttribute("teamName", myTeam.get(0).getTeamStats().getTeamName());
         } else {
-            model.addAttribute("teamName", "Unknown Team");
+            model.addAttribute("error", "Nie ma takiej druzyny");
         }
     }
 

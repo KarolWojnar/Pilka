@@ -16,8 +16,8 @@
     <h1 class="text-2xl font-bold mb-6 text-white">Wprowadź id drużyny i sezon, który chcesz pobrać</h1>
     <form th:action="@{/fixtures/team}" th:method="post" class="mb-6">
         <div class="mb-3">
-            <label for="teamId" class="block text-gray-300 text-sm font-bold mb-2">ID:</label>
-            <input required type="number" id="teamId" name="teamId" class="text-1xl shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+            <label for="teamName" class="block text-gray-300 text-sm font-bold mb-2">Nazwa drużyny:</label>
+            <input required type="text" id="teamName" name="teamName" class="text-1xl shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
         </div>
         <div class="mb-4 flex space-x-4">
             <div class="w-1/2">
