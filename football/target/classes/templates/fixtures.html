@@ -44,72 +44,72 @@
         <p th:text="${error}"></p>
     </div>
     <div class="mt-8 bg-gray-900"
-         th:data-dates="${dates.toString()}"
-    th:data-my-team-ratings="${myTeamRatings.toString()}"
-    th:data-average-ratings="${averageRatings.toString()}"
-    th:data-team-name="${teamName}">
-    <h2 class="text-xl font-bold text-white mb-4">Statystyki drużyn:</h2>
-    <canvas id="teamChart" width="400" height="200"></canvas>
-    <script>
-        document.addEventListener("DOMContentLoaded", function() {
-            const datesJson = document.querySelector('.mt-8').dataset.dates;
-            const myTeamRatingsJson = document.querySelector('.mt-8').dataset.myTeamRatings;
-            const averageRatingsJson = document.querySelector('.mt-8').dataset.averageRatings;
-            const teamNameJson = document.querySelector('.mt-8').dataset.teamName;
+         th:data-dates="${datesJson}"
+         th:data-my-team-ratings="${myTeamRatings}"
+         th:data-average-ratings="${averageRatings}"
+         th:data-team-name="${teamName}">
+        <h2 class="text-xl font-bold text-white mb-4">Statystyki drużyn:</h2>
+        <canvas id="teamChart" width="400" height="200"></canvas>
+        <script>
+            document.addEventListener("DOMContentLoaded", function() {
+                const datesJson = document.querySelector('.mt-8').dataset.dates;
+                const myTeamRatingsJson = document.querySelector('.mt-8').dataset.myTeamRatings;
+                const averageRatingsJson = document.querySelector('.mt-8').dataset.averageRatings;
+                const teamNameJson = document.querySelector('.mt-8').dataset.teamName;
 
-            console.log('Raw dates JSON:', datesJson);
-            console.log('Raw my team ratings JSON:', myTeamRatingsJson);
-            console.log('Raw average ratings JSON:', averageRatingsJson);
-            console.log('Raw team name JSON:', teamNameJson);
+                console.log('Raw dates JSON:', datesJson);
+                console.log('Raw my team ratings JSON:', myTeamRatingsJson);
+                console.log('Raw average ratings JSON:', averageRatingsJson);
+                console.log('Raw team name JSON:', teamNameJson);
 
-            try {
-                const labels = JSON.parse(datesJson.toString());
-                const myTeamData = JSON.parse(myTeamRatingsJson);
-                const averageTeamData = JSON.parse(averageRatingsJson);
-                const teamName = teamNameJson;
+                try {
+                    const labels = JSON.parse(datesJson);
+                    const myTeamData = JSON.parse(myTeamRatingsJson);
+                    const averageTeamData = JSON.parse(averageRatingsJson);
+                    const teamName = teamNameJson;
 
-                console.log('Parsed labels:', labels);
-                console.log('Parsed my team data:', myTeamData);
-                console.log('Parsed average team data:', averageTeamData);
-                console.log('Parsed team name:', teamName);
+                    console.log('Parsed labels:', labels);
+                    console.log('Parsed my team data:', myTeamData);
+                    console.log('Parsed average team data:', averageTeamData);
+                    console.log('Parsed team name:', teamName);
 
-                if (labels.length === 0 || myTeamData.length === 0 || averageTeamData.length === 0) {
-                    console.log('Brak danych do wyświetlenia na wykresie');
-                } else {
-                    const ctx = document.getElementById('teamChart').getContext('2d');
-                    new Chart(ctx, {
-                        type: 'line',
-                        data: {
-                            labels: labels,
-                            datasets: [{
-                                label: teamName,
-                                data: myTeamData,
-                                borderColor: 'rgba(75, 192, 192, 1)',
-                                borderWidth: 1,
-                                fill: false
-                            }, {
-                                label: 'Średnia wszystkich drużyn',
-                                data: averageTeamData,
-                                borderColor: 'rgba(153, 102, 255, 1)',
-                                borderWidth: 1,
-                                fill: false
-                            }]
-                        },
-                        options: {
-                            scales: {
-                                y: {
-                                    beginAtZero: true
+                    if (labels.length === 0 || myTeamData.length === 0 || averageTeamData.length === 0) {
+                        console.log('Brak danych do wyświetlenia na wykresie');
+                    } else {
+                        const ctx = document.getElementById('teamChart').getContext('2d');
+                        new Chart(ctx, {
+                            type: 'line',
+                            data: {
+                                labels: labels,
+                                datasets: [{
+                                    label: teamName,
+                                    data: myTeamData,
+                                    borderColor: 'rgba(75, 192, 192, 1)',
+                                    borderWidth: 1,
+                                    fill: false
+                                }, {
+                                    label: 'Średnia wszystkich drużyn',
+                                    data: averageTeamData,
+                                    borderColor: 'rgba(153, 102, 255, 1)',
+                                    borderWidth: 1,
+                                    fill: false
+                                }]
+                            },
+                            options: {
+                                scales: {
+                                    y: {
+                                        beginAtZero: true
+                                    }
                                 }
                             }
-                        }
-                    });
+                        });
+                    }
+                } catch (error) {
+                    console.error('Error parsing JSON:', error);
                 }
-            } catch (error) {
-                console.error('Error parsing JSON:', error);
-            }
-        });
-    </script>
-</div>
+            });
+        </script>
+    </div>
 </div>
 </body>
 </html>
