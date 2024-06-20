@@ -1,13 +1,12 @@
 package com.Football.football.Repositories;
 
 import com.Football.football.Tables.FixtureTeamsStats;
-import com.Football.football.Tables.TeamStats;
+
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.CrudRepository;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import java.sql.Date;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;

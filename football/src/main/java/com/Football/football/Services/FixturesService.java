@@ -9,7 +9,6 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import org.springframework.stereotype.Service;
@@ -23,10 +22,8 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.format.DateTimeFormatter;
-import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 import java.util.stream.StreamSupport;
 
 @Service
@@ -602,7 +599,6 @@ public class FixturesService {
         List<FixtureTeamsStats> tfS = fixtureTeamsStatsRepository.findAllByFixtureDateBetween(startDate.atStartOfDay(), endDate.atStartOfDay());
         Optional<Long> teamOp = fixtureTeamsStatsRepository.findIdTeam(teamName);
         if (teamOp.isPresent()) {
-            System.out.println(teamOp.get());
             long teamId = teamOp.get();
             List<FixturesTeamGroup> ftg = groupAllTeams(tfS, false);
             List<FixturesTeamRating> ftr = getRatings(ftg, false);
@@ -624,7 +620,6 @@ public class FixturesService {
                     periodStartDate = periodStartDate.plusMonths(1);
                 }
             }
-
             List<Double> avgRatings = new ArrayList<>(Collections.nCopies(periodStartDates.size(), 0.0));
             List<Double> myTeamRatings = new ArrayList<>(Collections.nCopies(periodStartDates.size(), 0.0));
 
@@ -640,7 +635,6 @@ public class FixturesService {
                     myTeamRatings.set(i, periodAverage);
                 }
             }
-
             List<String> dates = periodStartDates.stream().map(LocalDate::toString).collect(Collectors.toList());
             dates.removeLast();
             myTeamRatings.removeLast();
@@ -648,11 +642,6 @@ public class FixturesService {
 
             ObjectMapper objectMapper = new ObjectMapper();
             String datesJson = objectMapper.writeValueAsString(dates);
-
-
-            System.out.println(datesJson);
-            System.out.println(myTeamRatings);
-            System.out.println(avgRatings);
 
             model.addAttribute("datesJson", datesJson);
             model.addAttribute("myTeamRatings", myTeamRatings);
@@ -671,12 +660,11 @@ public class FixturesService {
         List<FixturesTeamRating> matchesInPeriod = teamRatings.stream()
                 .filter(team -> !team.getFixtureDate().toLocalDate().isBefore(periodStartDate) &&
                         !team.getFixtureDate().toLocalDate().isAfter(periodEndDate))
-                .collect(Collectors.toList());
+                .toList();
         if (matchesInPeriod.isEmpty()) {
-            return 0.0; // Jeśli nie ma meczów w danym okresie, zwracamy 0 jako średnią ocenę
+            return 0.0;
         } else {
             return matchesInPeriod.stream().mapToDouble(FixturesTeamRating::getRaiting).average().orElse(0.0);
         }
     }
-
 }

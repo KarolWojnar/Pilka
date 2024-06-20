@@ -28,13 +28,6 @@ public class PlayerController {
         return "playerView";
     }
 
-    @GetMapping("/byTeam/{teamId}")
-    public String getPlayersByTeam(@PathVariable Long teamId, Model model) {
-        Iterable<PlayerStats> players = playerService.getPlayersByTeamId(teamId);
-        model.addAttribute("players", players);
-        return "teamPlayersView";
-    }
-
     @GetMapping("/averageRatings")
     public String getAveragePlayerRatings(Model model) {
         Iterable<PlayerStats> players = playerService.getAveragePlayerRatings();
