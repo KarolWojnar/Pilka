@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Register</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class'
+        }
+    </script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body class="bg-gray-800 text-white font-sans">
+<div class="container mx-auto mt-10 p-5 bg-gray-700 rounded shadow-lg max-w-md">
+    <h1 class="text-2xl font-bold text-center mb-5">Register</h1>
+    <form th:action="@{/register}" th:method="post" id="registerForm">
+        <div class="mb-4 flex space-x-4">
+            <div class="w-1/2">
+                <label for="firstName" class="block mb-2">First name:</label>
+                <input required type="text" id="firstName" name="firstName" class="w-full p-2 rounded bg-gray-800 text-white">
+            </div>
+            <div class="w-1/2">
+                <label for="lastName" class="block mb-2">Last name:</label>
+                <input required type="text" id="lastName" name="lastName" class="w-full p-2 rounded bg-gray-800 text-white">
+            </div>
+        </div>
+        <div class="mb-4">
+            <label for="login" class="block mb-2">Login:</label>
+            <input type="text" id="login" name="login" class="w-full p-2 rounded bg-gray-800 text-white" required>
+            <div id="login-error" class="text-red-500 text-sm mt-2 hidden">Login is already taken.</div>
+        </div>
+        <div class="mb-4">
+            <label for="email" class="block mb-2">Email:</label>
+            <input type="email" id="email" name="email" class="w-full p-2 rounded bg-gray-800 text-white" required>
+            <div id="email-error" class="text-red-500 text-sm mt-2 hidden">Email is already taken.</div>
+        </div>
+        <div class="mb-4">
+            <label for="password" class="block mb-2">Password:</label>
+            <input type="password" id="password" name="password" class="w-full p-2 rounded bg-gray-800 text-white" required>
+        </div>
+        <div class="mb-4">
+            <label for="team" class="block mb-2">Team:</label>
+            <select id="team" name="team" class="w-full p-2 rounded bg-gray-800 text-white" required>
+                <option th:each="team : ${teams}" th:value="${team.id}" th:text="${team.teamName}"></option>
+            </select>
+        </div>
+        <div class="mb-4">
+            <label for="roleId" class="block mb-2">Role:</label>
+            <select id="roleId" name="roleId" class="w-full p-2 rounded bg-gray-800 text-white" required>
+                <option th:each="role : ${roles}" th:value="${role.id}" th:text="${role.getName()}"></option>
+            </select>
+        </div>
+        <div class="mt-6">
+            <input type="submit" value="Register" id="formSubmit" class="w-full p-2 bg-green-600 hover:bg-green-700 rounded text-white cursor-pointer">
+        </div>
+    </form>
+</div>
+<script>
+    $(document).ready(function() {
+        $('#registerForm').submit(function(event) {
+            event.preventDefault();
+
+            var formData = {
+                firstName: $('#firstName').val(),
+                lastName: $('#lastName').val(),
+                login: $('#login').val(),
+                email: $('#email').val(),
+                password: $('#password').val(),
+                team: $('#team').val()
+            };
+
+            $.ajax({
+                type: 'GET',
+                url: '/checkLogin',
+                data: { login: formData.login },
+                success: function(response) {
+                    console.log(response)
+                    if (response) {
+                        $('#login-error').removeClass('hidden');
+                    } else {
+                        $('#login-error').addClass('hidden');
+                        $.ajax({
+                            type: 'GET',
+                            url: '/checkEmail',
+                            data: { email: formData.email },
+                            success: function(response) {
+                                if (response) {
+                                    $('#email-error').removeClass('hidden');
+                                } else {
+                                    $('#email-error').addClass('hidden');
+                                    $('#registerForm')[0].submit();
+                                }
+                            }
+                        });
+                    }
+                }
+            });
+        });
+    });
+</script>
+</body>
+</html>
