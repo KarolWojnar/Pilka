@@ -7,6 +7,6 @@ import org.springframework.data.repository.CrudRepository;
 import java.util.Optional;
 
 public interface CoachRepository extends CrudRepository<CoachTeam, Long> {
-    Optional<CoachTeam> findByLogin(String name);
-    Optional<CoachTeam> findByEmail(String email);
+    Optional<CoachTeam> findCoachTeamByLogin(String name);
+    Optional<CoachTeam> findCoachTeamByEmail(String email);
 }

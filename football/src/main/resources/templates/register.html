@@ -45,54 +45,57 @@
                 <option th:each="team : ${teams}" th:value="${team.id}" th:text="${team.teamName}"></option>
             </select>
         </div>
+        <div class="mb-4">
+            <label for="roleId" class="block mb-2">Role:</label>
+            <select id="roleId" name="roleId" class="w-full p-2 rounded bg-gray-800 text-white" required>
+                <option th:each="role : ${roles}" th:value="${role.id}" th:text="${role.getName()}"></option>
+            </select>
+        </div>
         <div class="mt-6">
-            <input type="submit" value="Register" class="w-full p-2 bg-green-600 hover:bg-green-700 rounded text-white cursor-pointer">
+            <input type="submit" value="Register" id="formSubmit" class="w-full p-2 bg-green-600 hover:bg-green-700 rounded text-white cursor-pointer">
         </div>
     </form>
 </div>
 <script>
-    $(document).ready(function () {
-        $('#login').on('blur', function () {
-            var login = $(this).val();
+    $(document).ready(function() {
+        $('#registerForm').submit(function(event) {
+            event.preventDefault();
+
+            var formData = {
+                firstName: $('#firstName').val(),
+                lastName: $('#lastName').val(),
+                login: $('#login').val(),
+                email: $('#email').val(),
+                password: $('#password').val(),
+                team: $('#team').val()
+            };
+
             $.ajax({
+                type: 'GET',
                 url: '/checkLogin',
-                data: {login: login},
-                success: function (data) {
-                    if (data) {
+                data: { login: formData.login },
+                success: function(response) {
+                    console.log(response)
+                    if (response) {
                         $('#login-error').removeClass('hidden');
                     } else {
                         $('#login-error').addClass('hidden');
+                        $.ajax({
+                            type: 'GET',
+                            url: '/checkEmail',
+                            data: { email: formData.email },
+                            success: function(response) {
+                                if (response) {
+                                    $('#email-error').removeClass('hidden');
+                                } else {
+                                    $('#email-error').addClass('hidden');
+                                    $('#registerForm')[0].submit();
+                                }
+                            }
+                        });
                     }
-                },
-                error: function () {
-                    console.error('Error checking login');
                 }
             });
-        });
-
-        $('#email').on('blur', function () {
-            var email = $(this).val();
-            $.ajax({
-                url: '/checkEmail',
-                data: {email: email},
-                success: function (data) {
-                    if (data) {
-                        $('#email-error').removeClass('hidden');
-                    } else {
-                        $('#email-error').addClass('hidden');
-                    }
-                },
-                error: function () {
-                    console.error('Error checking email');
-                }
-            });
-        });
-
-        $('#registerForm').on('submit', function (e) {
-            if (!$('#login-error').hasClass('hidden') || !$('#email-error').hasClass('hidden')) {
-                e.preventDefault();
-                alert('Please fix the errors before submitting the form.');
-            }
         });
     });
 </script>

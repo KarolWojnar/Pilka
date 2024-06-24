@@ -80,7 +80,7 @@
                     <td>
                         <a class="font-bold text-emerald-700" th:href="@{/player/{id}/{year}(id=${player.id}, year=${player.season})}" th:text="${player.getTeamStats().getTeamName()}"></a>
                     </td>
-                    <td th:text="${player.pozycja}"></td>
+                    <td th:text="${player.getPlayerStats().pozycja}"></td>
                 </tr>
                 </tbody>
             </table>

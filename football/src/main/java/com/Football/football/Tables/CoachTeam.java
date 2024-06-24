@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.util.Collection;
 import java.util.List;
 
 @Entity
@@ -27,4 +28,12 @@ public class CoachTeam {
             inverseJoinColumns = @JoinColumn(name = "team_stats_id")
     )
     private List<TeamStats> teamStats;
+
+    @ManyToMany
+    @JoinTable(
+            name = "coach_team_roles",
+            joinColumns = @JoinColumn(name = "coach_id"),
+            inverseJoinColumns = @JoinColumn(name = "role_id")
+    )
+    private Collection<Role> roles;
 }

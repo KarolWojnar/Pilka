@@ -17,7 +17,7 @@ public class UserDetailsServiceImpl implements UserDetailsService {
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        CoachTeam coach = coachRepository.findByLogin(username)
+        CoachTeam coach = coachRepository.findCoachTeamByLogin(username)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
         return User.builder()
                 .username(coach.getLogin())

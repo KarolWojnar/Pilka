@@ -14,7 +14,7 @@ public class PlayerStats {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    @Column(name = "id gracza", unique = false)
+    @Column(name = "id gracza")
     private Long playerId;
     private String imie;
     private String nazwisko;

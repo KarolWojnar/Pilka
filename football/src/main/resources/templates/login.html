@@ -3,59 +3,29 @@
 <head>
     <meta charset="UTF-8">
     <title>Login</title>
-    <style>
-        body {
-            background-color: #2C3E50;
-            color: #ECF0F1;
-            font-family: Arial, sans-serif;
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class'
         }
-        .container {
-            max-width: 400px;
-            margin: 50px auto;
-            padding: 20px;
-            background-color: #34495E;
-            border-radius: 8px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
-        }
-        h1 {
-            text-align: center;
-        }
-        input[type="text"], input[type="password"] {
-            width: 100%;
-            padding: 10px;
-            margin: 10px 0;
-            border: none;
-            border-radius: 4px;
-            background-color: #95A5A6;
-            color: #2C3E50;
-        }
-        input[type="submit"] {
-            width: 100%;
-            padding: 10px;
-            margin: 10px 0;
-            border: none;
-            border-radius: 4px;
-            background-color: #1ABC9C;
-            color: #ECF0F1;
-            cursor: pointer;
-            font-size: 16px;
-        }
-        input[type="submit"]:hover {
-            background-color: #16A085;
-        }
-    </style>
+    </script>
 </head>
-<body>
-<div class="container">
-    <h1>Login</h1>
-    <form th:action="@{/login}" method="post">
-        <label for="login">Login:</label>
-        <input type="text" id="login" name="login" required>
-
-        <label for="password">Password:</label>
-        <input type="password" id="password" name="password" required>
-
-        <input type="submit" value="Login">
+<body class="bg-gray-800 text-white font-sans">
+<div class="container mx-auto mt-10 p-5 bg-gray-700 rounded shadow-lg max-w-md">
+    <h1 class="text-2xl font-bold text-center mb-5">Register</h1>
+    <form th:action="@{/login}" th:method="post" id="registerForm">
+        <div class="mb-4">
+            <label for="login" class="block mb-2">Login:</label>
+            <input type="text" id="login" name="login" class="w-full p-2 rounded bg-gray-800 text-white" required th:value="${login}">
+            <div id="login-error" class="text-red-500 text-sm mt-2 hidden">Login is already taken.</div>
+        </div>
+        <div class="mb-4">
+            <label for="password" class="block mb-2">Password:</label>
+            <input type="password" id="password" name="password" class="w-full p-2 rounded bg-gray-800 text-white" required>
+        </div>
+        <div class="mt-6">
+            <input type="submit" value="Register" class="w-full p-2 bg-green-600 hover:bg-green-700 rounded text-white cursor-pointer">
+        </div>
     </form>
 </div>
 </body>

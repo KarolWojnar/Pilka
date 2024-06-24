@@ -25,12 +25,12 @@ public class WebSecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .authorizeHttpRequests(authz -> authz
-                        .requestMatchers("/register", "/login", "/css/**").permitAll()
-                        .anyRequest().authenticated()
+                        .requestMatchers("/register", "/login", "/css/**", "/profile", "/validate/**").permitAll()
+                        .anyRequest().permitAll()
                 )
                 .formLogin(form -> form
                         .loginPage("/login")
-                        .defaultSuccessUrl("/profile", true)
+                        .successForwardUrl("/profile")
                         .permitAll()
                 )
                 .logout(LogoutConfigurer::permitAll);
