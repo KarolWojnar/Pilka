@@ -2,7 +2,7 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="utf-8">
-    <title>Document</title>
+    <title>Profile</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -13,6 +13,11 @@
     <script src="https://cdn.anychart.com/releases/8.11.0/js/anychart-radar.min.js"></script>
 </head>
 <body class="bg-gray-500">
+<div th:insert="fragments :: nav"></div>
+<div th:if="${coach}">
+    <h1 th:text="'Hello, ' + ${coach.getLogin()}"></h1>
+    <p th:text="${coach.getFirstName()} + ' ' + ${coach.getLastName()}"></p>
+</div>
 <div th:if="${noPlayer}">
     <p>Nie ma takiego zawodnika</p>
 </div>

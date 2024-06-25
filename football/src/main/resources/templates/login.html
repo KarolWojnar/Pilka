@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <title>Login</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script>
         tailwind.config = {
             darkMode: 'class'
@@ -11,22 +12,30 @@
     </script>
 </head>
 <body class="bg-gray-800 text-white font-sans">
-<div class="container mx-auto mt-10 p-5 bg-gray-700 rounded shadow-lg max-w-md">
-    <h1 class="text-2xl font-bold text-center mb-5">Register</h1>
-    <form th:action="@{/login}" th:method="post" id="registerForm">
+<div class="container mx-auto mt-10 px-5 py-3 bg-gray-700 rounded shadow-lg max-w-md">
+    <h1 class="text-2xl font-bold text-center mb-5">Login</h1>
+    <form th:action="@{/login}" method="post" id="loginForm">
         <div class="mb-4">
-            <label for="login" class="block mb-2">Login:</label>
-            <input type="text" id="login" name="login" class="w-full p-2 rounded bg-gray-800 text-white" required th:value="${login}">
-            <div id="login-error" class="text-red-500 text-sm mt-2 hidden">Login is already taken.</div>
+            <label for="username" class="block mb-2">Username:</label>
+            <input type="text" id="username" name="username" class="w-full p-2 rounded bg-gray-800 text-white" required>
         </div>
         <div class="mb-4">
             <label for="password" class="block mb-2">Password:</label>
             <input type="password" id="password" name="password" class="w-full p-2 rounded bg-gray-800 text-white" required>
         </div>
         <div class="mt-6">
-            <input type="submit" value="Register" class="w-full p-2 bg-green-600 hover:bg-green-700 rounded text-white cursor-pointer">
+            <input type="submit" value="Login" class="w-full p-2 bg-green-600 hover:bg-green-700 rounded text-white cursor-pointer">
         </div>
     </form>
+    <div class="text-center mt-3">
+        <a th:href="@{/register}" class="text-blue-600 dark:text-blue-500 hover:underline">Register</a>
+    </div>
+</div>
+<div class="text-center text-red-800" th:if="${param.logout}">
+    <p>You have been logged out.</p>
+</div>
+<div class="text-center text-red-800" th:if="${param.error}">
+    <p>Invalid username or password.</p>
 </div>
 </body>
 </html>

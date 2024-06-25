@@ -9,9 +9,14 @@ import com.Football.football.Tables.Role;
 import com.Football.football.Tables.TeamStats;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
+
+import java.net.Authenticator;
+import java.util.Optional;
 
 @Controller
 @RequiredArgsConstructor
@@ -43,7 +48,11 @@ public class CoachController {
     }
 
     @GetMapping("/profile")
-    public String goToProfile() {
+    public String goToProfile(Model model) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        System.out.println(auth.isAuthenticated());
+        Optional<CoachTeam> coach = coachRepository.findUser(auth.getName());
+        coach.ifPresent(coachTeam -> model.addAttribute("coach", coachTeam));
         return "coachProfile";
     }
 

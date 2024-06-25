@@ -2,27 +2,34 @@ package com.Football.football.Services;
 
 import com.Football.football.Repositories.CoachRepository;
 import com.Football.football.Tables.CoachTeam;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.core.userdetails.User;
+import lombok.RequiredArgsConstructor;
+import org.hibernate.Hibernate;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
+import java.util.stream.Collectors;
+
 @Service
+@RequiredArgsConstructor
 public class UserDetailsServiceImpl implements UserDetailsService {
 
-    @Autowired
-    private CoachRepository coachRepository;
-
+    private final CoachRepository coachRepository;
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        CoachTeam coach = coachRepository.findCoachTeamByLogin(username)
+        CoachTeam coachTeam = coachRepository.findUser(username)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
-        return User.builder()
-                .username(coach.getLogin())
-                .password(coach.getPassword())
-                .roles("USER")
-                .build();
+
+        Hibernate.initialize(coachTeam.getRoles());
+
+        return new org.springframework.security.core.userdetails.User(
+                coachTeam.getLogin(),
+                coachTeam.getPassword(),
+                coachTeam.getRoles().stream()
+                        .map(role -> new SimpleGrantedAuthority(role.getName()))
+                        .collect(Collectors.toList())
+        );
     }
 }

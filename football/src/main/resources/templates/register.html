@@ -55,6 +55,9 @@
             <input type="submit" value="Register" id="formSubmit" class="w-full p-2 bg-green-600 hover:bg-green-700 rounded text-white cursor-pointer">
         </div>
     </form>
+    <div class="text-center mt-3">
+        <a th:href="@{/login}" class="text-blue-600 dark:text-blue-500 hover:underline">Login</a>
+    </div>
 </div>
 <script>
     $(document).ready(function() {
@@ -75,7 +78,6 @@
                 url: '/checkLogin',
                 data: { login: formData.login },
                 success: function(response) {
-                    console.log(response)
                     if (response) {
                         $('#login-error').removeClass('hidden');
                     } else {
