@@ -50,7 +50,6 @@ public class CoachController {
     @GetMapping("/profile")
     public String goToProfile(Model model) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        System.out.println(auth.isAuthenticated());
         Optional<CoachTeam> coach = coachRepository.findUser(auth.getName());
         coach.ifPresent(coachTeam -> model.addAttribute("coach", coachTeam));
         return "coachProfile";
