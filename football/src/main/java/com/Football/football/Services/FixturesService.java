@@ -52,7 +52,6 @@ public class FixturesService {
                     .build();
 
             HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-
             if (response.statusCode() == 429) {
                 apiKeyManager.switchToNextApiKey();
                 attempts++;
@@ -64,7 +63,7 @@ public class FixturesService {
                     JSONArray fixtures = jResponse.getJSONArray("response");
                     Map<Long, TeamStats> teamStatsMap = fetchTeamStatsMap(year);
                     Map<Long, PlayerStats> playerStatsMap = fetchPlayerStatsMap(year);
-                    for (int i = 380; i < fixtures.length(); i++) {
+                    for (int i = 0; i < fixtures.length(); i++) {
                         JSONObject fixture = fixtures.getJSONObject(i);
                         saveNewFixture(fixture, year, teamStatsMap, playerStatsMap);
                     }
@@ -91,6 +90,9 @@ public class FixturesService {
         LocalDateTime date = LocalDateTime.parse(dateString, DateTimeFormatter.ISO_LOCAL_DATE_TIME);
 
         JSONArray fixturePlayers = getFixtureStatsFromAPI(fixtureId);
+        if (fixturePlayers.length() == 0) {
+            return;
+        }
         JSONObject team0 = fixturePlayers.getJSONObject(0);
         JSONObject team1 = fixturePlayers.getJSONObject(1);
         long team0Id = team0.getJSONObject("team").getLong("id");
@@ -474,13 +476,12 @@ public class FixturesService {
             x.setTeamName(fixture.getTeamStats().getTeamName());
             x.setSeason(fixture.getTeamStats().getSeason());
 
-            double normPasses = fixture.getPasses() / maxPasses;
             double normAccPasses = fixture.getAccuracyPasses() / maxAccuratePasses;
             double normKeyPasses = fixture.getPasses() / maxKeyPasses;
             double normAsists = fixture.getAsists() / maxAsists;
-            double sumPIK = ((normPasses * weights[0]) + (normAccPasses * weights[1]) +
+            double sumPIK = ((normAccPasses * weights[1]) +
                     (normKeyPasses * weights[2]) + (normAsists * weights[15]))
-                     / (weights[0] + weights[1] + weights[2] + weights[15]);
+                     / (weights[1] + weights[2] + weights[15]);
             x.setPodaniaKreatywnosc(sumPIK);
 
             double normDribblesWon = fixture.getDribblesWon() / maxDribbleWon;
@@ -656,7 +657,7 @@ public class FixturesService {
         }
     }
 
-    private double calculatePeriodAverage(List<FixturesTeamRating> teamRatings, LocalDate periodStartDate, LocalDate periodEndDate) {
+    protected double calculatePeriodAverage(List<FixturesTeamRating> teamRatings, LocalDate periodStartDate, LocalDate periodEndDate) {
         List<FixturesTeamRating> matchesInPeriod = teamRatings.stream()
                 .filter(team -> !team.getFixtureDate().toLocalDate().isBefore(periodStartDate) &&
                         !team.getFixtureDate().toLocalDate().isAfter(periodEndDate))

@@ -3,7 +3,9 @@ package com.Football.football.Services;
 import com.Football.football.ApiKeyManager;
 import com.Football.football.Repositories.*;
 import com.Football.football.Tables.*;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.hibernate.Hibernate;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -375,16 +377,21 @@ public class PlayerStatsService {
         processSummary(true);
     }
 
-    private void processSummary(boolean withPos) {
+    @Transactional
+    public void processSummary(boolean withPos) {
         List<PlayerStats> combinationsTeamsAndSeasons = statystykiZawodnikaRepository.getPlayerStatsGroupedBySeasonAndTeamStats();
 
         for (PlayerStats singleCombination : combinationsTeamsAndSeasons) {
             long season = singleCombination.getSeason();
-            long teamId = singleCombination.getTeamStats().getTeamId();
+            TeamStats teamStats = singleCombination.getTeamStats();
 
-            Optional<TeamStats> teamStatsOp = teamStatsRepository.findTeamStatsByTeamIdAndSeason(teamId, season);
+            if (!Hibernate.isInitialized(teamStats)) {
+                Hibernate.initialize(teamStats);
+            }
+
+            Optional<TeamStats> teamStatsOp = teamStatsRepository.findTeamStatsByTeamIdAndSeason(teamStats.getTeamId(), season);
             if (teamStatsOp.isPresent()) {
-                TeamStats teamStats = teamStatsOp.get();
+                teamStats = teamStatsOp.get();
                 if (withPos) {
                     processTeamStatsWithPos(season, teamStats);
                 } else {
