@@ -273,6 +273,7 @@ public class FixturesService {
 
     public void sumFixturesByTeam() {
         List<Integer> fixturesId = fixtureRepository.getAllFixturesIDs();
+        System.out.println(fixturesId.size());
         for (int fID : fixturesId) {
             findFixtureAndSaveByTeam(fID);
         }
@@ -430,7 +431,7 @@ public class FixturesService {
     }
 
     private List<FixturesTeamGroup> calculateStatsAndSave(double[] weights, Iterable<FixtureTeamsStats> allFixtures, boolean addToDB) {
-        double maxPasses = 1, maxKeyPasses = 1, maxAccuratePasses = 1, maxDribbleWon = 1,
+        double  maxKeyPasses = 1, maxAccuratePasses = 1, maxDribbleWon = 1,
                 maxDribbles = 1, maxShootsOnGoal = 1, maxOffsides = 1, maxTrackles = 1,
                 maxShoots = 1, maxFoulsCommited = 1, maxRedCards = 1, maxYellowCards = 1,
                 maxDuelsLost = 1, maxInterpWon = 1, maxBlocks = 1,
@@ -441,7 +442,6 @@ public class FixturesService {
 
         for (FixtureTeamsStats fixture : allFixtures) {
             fixtureCount++;
-            maxPasses = Math.max(fixture.getPasses(), maxPasses);
             maxAccuratePasses = Math.max(fixture.getAccuracyPasses(), maxAccuratePasses);
             maxKeyPasses = Math.max(fixture.getKeyPasses(), maxKeyPasses);
             maxDribbleWon = Math.max(fixture.getDribblesWon(), maxDribbleWon);
@@ -475,13 +475,12 @@ public class FixturesService {
             x.setTeamName(fixture.getTeamStats().getTeamName());
             x.setSeason(fixture.getTeamStats().getSeason());
 
-            double normPasses = fixture.getPasses() / maxPasses;
             double normAccPasses = fixture.getAccuracyPasses() / maxAccuratePasses;
-            double normKeyPasses = fixture.getPasses() / maxKeyPasses;
+            double normKeyPasses = fixture.getKeyPasses() / maxKeyPasses;
             double normAsists = fixture.getAsists() / maxAsists;
-            double sumPIK = ((normPasses * weights[0]) + (normAccPasses * weights[1]) +
+            double sumPIK = ((normAccPasses * weights[1]) +
                     (normKeyPasses * weights[2]) + (normAsists * weights[15]))
-                     / (weights[0] + weights[1] + weights[2] + weights[15]);
+                     / (weights[1] + weights[2] + weights[15]);
             x.setPodaniaKreatywnosc(sumPIK);
 
             double normDribblesWon = fixture.getDribblesWon() / maxDribbleWon;
@@ -490,7 +489,7 @@ public class FixturesService {
             double normOffsides = fixture.getOffside() / maxOffsides;
             double sumDIS = ((normDribblesWon * weights[3]) + (normShootsOnGoal * weights[5]) +
                     (normGoals * weights[14]) - (normOffsides * weights[18]))
-                    / (weights[3] + weights[5] + weights[14] + weights[18]);
+                    / (weights[3] + weights[5] + weights[14] - weights[18]);
             x.setDryblingSkutecznosc(sumDIS);
 
             double normFoulsCommited = fixture.getFoulsCommited() / maxFoulsCommited;
@@ -512,7 +511,7 @@ public class FixturesService {
             double normFoulsDrawn = fixture.getFoulsDrawn() / maxFoulsCommited;
             double normBlocks = fixture.getBlocks() / maxBlocks;
             double sumOIK = ((normDuelsWon * weights[13]) + (normInterpWon * weights[12]) +
-                    (normFoulsDrawn * weights[8]) + normBlocks * weights[17])
+                    (normFoulsDrawn * weights[8]) + (normBlocks * weights[17]))
                     / (weights[13] + weights[12] + weights[8] + weights[17]);
             x.setObronaKotrolaPrzeciwnika(sumOIK);
 
