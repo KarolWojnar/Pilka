@@ -16,7 +16,7 @@ public interface PlayersStatsRepo extends CrudRepository<PlayerStats, Long> {
 
     Iterable<PlayerStats> getPlayerStatsByPozycja(String pos);
 
-    @Query("select ps from PlayerStats ps group by ps.season, ps.teamStats")
+    @Query("select ps from PlayerStats ps join fetch ps.teamStats")
     List<PlayerStats> getPlayerStatsGroupedBySeasonAndTeamStats();
 
     Iterable<PlayerStats> findPlayerStatsByTeamStats(TeamStats team);

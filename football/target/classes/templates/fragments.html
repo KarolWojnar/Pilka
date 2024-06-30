@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Fragments</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class'
+        }
+    </script>
+</head>
+<body class="bg-gray-800 text-white font-sans">
+<div th:fragment="nav">
+    <nav class="bg-gray-700 p-4 rounded shadow-lg">
+        <ul class="flex space-x-4 mx-24 items-end">
+            <li><a th:href="@{/}" class="text-white hover:text-blue-500">Home</a></li>
+            <li><a th:href="@{/profile}" class="text-white hover:text-blue-500">Profile</a></li>
+            <li th:if="${!#authorization.getAuthentication().isAuthenticated()}"><a th:href="@{/login}" class="text-white hover:text-blue-500">Login</a></li>
+            <li th:if="${#authorization.getAuthentication().isAuthenticated()}">
+                <form th:action="@{/logout}" method="post">
+                    <button type="submit" class="text-white hover:text-blue-500">Logout</button>
+                </form>
+            </li>
+        </ul>
+    </nav>
+</div>
+</body>
+</html>

@@ -1,7 +1,6 @@
 package com.Football.football.Controllers.Teams;
 
 import com.Football.football.Repositories.*;
-import com.Football.football.Services.PlayerStatsService;
 import com.Football.football.Services.TeamStatsService;
 import com.Football.football.Tables.*;
 import lombok.RequiredArgsConstructor;
@@ -57,7 +56,7 @@ public class TeamController {
                 model.addAttribute("noPlayer", "Nie ma takiej drużyny");
             }
         }
-        return "playerView2";
+        return "coachProfile";
     }
 
     @GetMapping("/compare/year/{year}/teams/{teamA}&{teamB}")

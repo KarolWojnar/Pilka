@@ -14,4 +14,6 @@ public interface TeamStatsRepo extends CrudRepository<TeamStats, Long> {
     Iterable<TeamStats> getDistinctTeams();
     Optional<TeamStats> findTeamStatsByTeamIdAndSeason(long teamId, long year);
     List<TeamStats> findAllBySeason(long year);
+
+    Optional<TeamStats> findFirstById(long team);
 }

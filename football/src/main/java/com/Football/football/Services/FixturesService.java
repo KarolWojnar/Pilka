@@ -3,11 +3,12 @@ package com.Football.football.Services;
 import com.Football.football.ApiKeyManager;
 import com.Football.football.Repositories.*;
 import com.Football.football.Tables.*;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import org.springframework.stereotype.Service;
@@ -21,10 +22,8 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.format.DateTimeFormatter;
-import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 import java.util.stream.StreamSupport;
 
 @Service
@@ -53,7 +52,6 @@ public class FixturesService {
                     .build();
 
             HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-
             if (response.statusCode() == 429) {
                 apiKeyManager.switchToNextApiKey();
                 attempts++;
@@ -65,7 +63,7 @@ public class FixturesService {
                     JSONArray fixtures = jResponse.getJSONArray("response");
                     Map<Long, TeamStats> teamStatsMap = fetchTeamStatsMap(year);
                     Map<Long, PlayerStats> playerStatsMap = fetchPlayerStatsMap(year);
-                    for (int i = 380; i < fixtures.length(); i++) {
+                    for (int i = 0; i < fixtures.length(); i++) {
                         JSONObject fixture = fixtures.getJSONObject(i);
                         saveNewFixture(fixture, year, teamStatsMap, playerStatsMap);
                     }
@@ -92,6 +90,9 @@ public class FixturesService {
         LocalDateTime date = LocalDateTime.parse(dateString, DateTimeFormatter.ISO_LOCAL_DATE_TIME);
 
         JSONArray fixturePlayers = getFixtureStatsFromAPI(fixtureId);
+        if (fixturePlayers.length() == 0) {
+            return;
+        }
         JSONObject team0 = fixturePlayers.getJSONObject(0);
         JSONObject team1 = fixturePlayers.getJSONObject(1);
         long team0Id = team0.getJSONObject("team").getLong("id");
@@ -595,61 +596,74 @@ public class FixturesService {
         return fTeam;
     }
 
-    public void getRatingsByDateAndTeamId(long teamId, LocalDate startDate, LocalDate endDate, Model model) {
+    public void getRatingsByDateAndTeamId(String teamName, LocalDate startDate, LocalDate endDate, String rounding, Model model) throws JsonProcessingException {
         List<FixtureTeamsStats> tfS = fixtureTeamsStatsRepository.findAllByFixtureDateBetween(startDate.atStartOfDay(), endDate.atStartOfDay());
-        List<FixturesTeamGroup> ftg = groupAllTeams(tfS, false);
-        List<FixturesTeamRating> ftr = getRatings(ftg, false);
-        List<FixturesTeamRating> myTeam = ftr.stream()
-                .filter(team -> team.getTeamStats().getTeamId() == teamId)
-                .toList();
+        Optional<Long> teamOp = fixtureTeamsStatsRepository.findIdTeam(teamName);
+        if (teamOp.isPresent()) {
+            long teamId = teamOp.get();
+            List<FixturesTeamGroup> ftg = groupAllTeams(tfS, false);
+            List<FixturesTeamRating> ftr = getRatings(ftg, false);
+            List<FixturesTeamRating> myTeam = ftr.stream()
+                    .filter(team -> team.getTeamStats().getTeamId() == teamId)
+                    .toList();
 
-        int numberOfPeriods = 10;
-        long daysBetween = ChronoUnit.DAYS.between(startDate, endDate);
-        long daysPerPeriod = daysBetween / numberOfPeriods;
+            List<LocalDate> periodStartDates = new ArrayList<>();
+            LocalDate periodStartDate = startDate;
 
-        List<Double> avgRatings = new ArrayList<>(Collections.nCopies(numberOfPeriods, 0.0));
-        List<Double> myTeamRatings = new ArrayList<>(Collections.nCopies(numberOfPeriods, 0.0));
-
-        for (int i = 0; i < numberOfPeriods; i++) {
-            LocalDate periodStartDate = startDate.plusDays(i * daysPerPeriod);
-            LocalDate periodEndDate = periodStartDate.plusDays(daysPerPeriod);
-
-            double periodAverage = calculatePeriodAverage(myTeam, periodStartDate, periodEndDate);
-            double periodAverage2 = calculatePeriodAverage(ftr, periodStartDate, periodEndDate);
-            avgRatings.set(i, periodAverage2);
-
-            if (periodAverage != 0.0) {
-                myTeamRatings.set(i, periodAverage);
+            if ("week".equals(rounding)) {
+                while (!periodStartDate.isAfter(endDate)) {
+                    periodStartDates.add(periodStartDate);
+                    periodStartDate = periodStartDate.plusWeeks(1);
+                }
+            } else if ("month".equals(rounding)) {
+                while (!periodStartDate.isAfter(endDate)) {
+                    periodStartDates.add(periodStartDate);
+                    periodStartDate = periodStartDate.plusMonths(1);
+                }
             }
-        }
+            List<Double> avgRatings = new ArrayList<>(Collections.nCopies(periodStartDates.size(), 0.0));
+            List<Double> myTeamRatings = new ArrayList<>(Collections.nCopies(periodStartDates.size(), 0.0));
 
-        List<String> dates = new ArrayList<>();
-        for (int i = 0; i < numberOfPeriods; i++) {
-            LocalDate periodStartDate = startDate.plusDays(i * daysPerPeriod);
-            dates.add(periodStartDate.toString());
-        }
+            for (int i = 0; i < periodStartDates.size(); i++) {
+                periodStartDate = periodStartDates.get(i);
+                LocalDate periodEndDate = (i == periodStartDates.size() - 1) ? endDate : periodStartDates.get(i + 1).minusDays(1);
 
-        model.addAttribute("dates", dates);
-        System.out.println(dates);
-        System.out.println(myTeamRatings);
-        System.out.println(avgRatings);
-        System.out.println(myTeam.getFirst().getTeamStats().getTeamName());
-        model.addAttribute("myTeamRatings", myTeamRatings);
-        if (!myTeam.isEmpty()) {
-            model.addAttribute("teamName", myTeam.getFirst().getTeamStats().getTeamName());
+                double periodAverage = calculatePeriodAverage(myTeam, periodStartDate, periodEndDate);
+                double periodAverage2 = calculatePeriodAverage(ftr, periodStartDate, periodEndDate);
+                avgRatings.set(i, periodAverage2);
+
+                if (periodAverage != 0.0) {
+                    myTeamRatings.set(i, periodAverage);
+                }
+            }
+            List<String> dates = periodStartDates.stream().map(LocalDate::toString).collect(Collectors.toList());
+            dates.removeLast();
+            myTeamRatings.removeLast();
+            avgRatings.removeLast();
+
+            ObjectMapper objectMapper = new ObjectMapper();
+            String datesJson = objectMapper.writeValueAsString(dates);
+
+            model.addAttribute("datesJson", datesJson);
+            model.addAttribute("myTeamRatings", myTeamRatings);
+            model.addAttribute("averageRatings", avgRatings);
+            if (!myTeam.isEmpty()) {
+                model.addAttribute("teamName", myTeam.get(0).getTeamStats().getTeamName());
+            } else {
+                model.addAttribute("teamName", "Unknown Team");
+            }
         } else {
-            model.addAttribute("teamName", "Unknown Team");
+            model.addAttribute("error", "Nie ma takiej druzyny");
         }
-        model.addAttribute("averageRatings", avgRatings);
     }
 
-    private double calculatePeriodAverage(List<FixturesTeamRating> teamRatings, LocalDate periodStartDate, LocalDate periodEndDate) {
+    protected double calculatePeriodAverage(List<FixturesTeamRating> teamRatings, LocalDate periodStartDate, LocalDate periodEndDate) {
         List<FixturesTeamRating> matchesInPeriod = teamRatings.stream()
                 .filter(team -> !team.getFixtureDate().toLocalDate().isBefore(periodStartDate) &&
                         !team.getFixtureDate().toLocalDate().isAfter(periodEndDate))
-                .collect(Collectors.toList());
+                .toList();
         if (matchesInPeriod.isEmpty()) {
-            return 0.0; // Jeśli nie ma meczów w danym okresie, zwracamy 0 jako średnią ocenę
+            return 0.0;
         } else {
             return matchesInPeriod.stream().mapToDouble(FixturesTeamRating::getRaiting).average().orElse(0.0);
         }
