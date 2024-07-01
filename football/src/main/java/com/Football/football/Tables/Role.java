@@ -17,6 +17,6 @@ public class Role {
     private Long id;
     private String name;
 
-    @ManyToMany(mappedBy = "roles")
+    @ManyToMany(mappedBy = "roles", fetch = FetchType.EAGER)
     private List<CoachTeam> coachTeams;
 }

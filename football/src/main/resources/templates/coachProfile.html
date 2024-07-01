@@ -36,8 +36,9 @@
                     <option value="week" selected>Week</option>
                     <option value="month">Month</option>
                 </select>
-                <button type="submit" class="px-4 py-2 bg-blue-500 text-white rounded">Apply</button>
+                <button type="submit" class="px-4 py-2 bg-blue-500 text-white rounded" onclick="return validateDates()">Apply</button>
             </div>
+            <div id="error-message" class="text-red-500 mt-2"></div>
         </form>
 
         <canvas id="teamChart" width="400" height="200"></canvas>
@@ -72,13 +73,13 @@
                                 datasets: [{
                                     label: teamName,
                                     data: myTeamData,
-                                    borderColor: 'rgba(75, 192, 192, 1)',
+                                    borderColor: '#E5593499',
                                     borderWidth: 1,
                                     fill: false
                                 }, {
                                     label: 'Average of all teams',
                                     data: averageTeamData,
-                                    borderColor: 'rgba(153, 102, 255, 1)',
+                                    borderColor: '#64B5F6BF',
                                     borderWidth: 1,
                                     fill: false
                                 }]
@@ -96,6 +97,19 @@
                     console.error('Error parsing JSON:', error);
                 }
             });
+
+            function validateDates() {
+                const startDate = document.getElementById('startDate').value;
+                const endDate = document.getElementById('endDate').value;
+                const errorMessage = document.getElementById('error-message');
+
+                if (startDate && endDate && new Date(startDate) > new Date(endDate)) {
+                    errorMessage.textContent = 'Start date cannot be greater than end date.';
+                    return false;
+                }
+                errorMessage.textContent = '';
+                return true;
+            }
         </script>
     </div>
 
@@ -118,18 +132,18 @@
                             var chart = anychart.radar();
                             chart.defaultSeriesType('area');
                             chart.data(chartData);
-                            chart.background().fill('#1f2937');  // Dark background
+                            chart.background().fill('#111827');
                             chart.palette(['#E5593499', '#64B5F6BF']);
-                            chart.yAxis().stroke('#ffffff');
-                            chart.yAxis().ticks().stroke('#ffffff');
+                            chart.yAxis().stroke('rgba(255,255,255,0.15)');
+                            chart.yAxis().ticks().stroke('rgba(255,255,255,0.11)');
                             chart.xGrid().stroke({
-                                color: "#ffffff",
+                                color: "rgba(255,255,255,0.15)",
                                 thickness: 0.5,
                                 dash: "10 5"
                             });
                             chart.yGrid().palette(['gray 0.05', 'gray 0.025']);
                             chart.yScale().minimum(0);
-                            chart.yScale().ticks().interval(0.01);
+                            chart.yScale().ticks().interval(0.03);
                             chart.interactivity().hoverMode('by-x');
                             chart.markerPalette(['star5']);
                             chart.tooltip()

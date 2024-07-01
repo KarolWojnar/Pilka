@@ -21,7 +21,7 @@ public class CoachTeam {
     @Column(unique = true)
     private String email;
     private String password;
-    @ManyToMany
+    @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
             name = "coach_team_stats",
             joinColumns = @JoinColumn(name = "coach_id"),
@@ -29,7 +29,7 @@ public class CoachTeam {
     )
     private List<TeamStats> teamStats;
 
-    @ManyToMany
+    @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
             name = "coach_team_roles",
             joinColumns = @JoinColumn(name = "coach_id"),

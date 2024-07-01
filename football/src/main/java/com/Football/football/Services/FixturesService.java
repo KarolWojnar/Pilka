@@ -5,6 +5,8 @@ import com.Football.football.Repositories.*;
 import com.Football.football.Tables.*;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.transaction.Transactional;
+import org.hibernate.Hibernate;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -431,13 +433,13 @@ public class FixturesService {
 
     }
 
-    private List<FixturesTeamGroup> calculateStatsAndSave(double[] weights, Iterable<FixtureTeamsStats> allFixtures, boolean addToDB) {
-        double  maxKeyPasses = 1, maxAccuratePasses = 1, maxDribbleWon = 1,
-                maxDribbles = 1, maxShootsOnGoal = 1, maxOffsides = 1, maxTrackles = 1,
-                maxShoots = 1, maxFoulsCommited = 1, maxRedCards = 1, maxYellowCards = 1,
-                maxDuelsLost = 1, maxInterpWon = 1, maxBlocks = 1,
-                maxFoulsDrawn = 1, maxGoalsConceded = 1, maxDuelsWon = 1, maxGoals = 1,
-                maxAsists = 1;
+    public List<FixturesTeamGroup> calculateStatsAndSave(double[] weights, Iterable<FixtureTeamsStats> allFixtures, boolean addToDB) {
+        double  maxPasses = 0.01, maxKeyPasses = 0.01, maxAccuratePasses = 0.01, maxDribbleWon = 0.01,
+                maxDribbles = 0.01, maxShootsOnGoal = 0.01, maxOffsides = 0.01, maxTrackles = 0.01,
+                maxShoots = 0.01, maxFoulsCommited = 0.01, maxRedCards = 0.01, maxYellowCards = 0.01,
+                maxDuelsLost = 0.01, maxInterpWon = 0.01, maxBlocks = 0.01,
+                maxFoulsDrawn = 0.01, maxGoalsConceded = 0.01, maxDuelsWon = 0.01, maxGoals = 0.01,
+                maxAsists = 0.01;
 
         int fixtureCount = 0;
 
@@ -445,6 +447,7 @@ public class FixturesService {
             fixtureCount++;
             maxAccuratePasses = Math.max(fixture.getAccuracyPasses(), maxAccuratePasses);
             maxKeyPasses = Math.max(fixture.getKeyPasses(), maxKeyPasses);
+            maxPasses = Math.max(fixture.getPasses(), maxPasses);
             maxDribbleWon = Math.max(fixture.getDribblesWon(), maxDribbleWon);
             maxDribbles = Math.max(fixture.getDribbles(), maxDribbles);
             maxShootsOnGoal = Math.max(fixture.getShotsOnGoal(), maxShootsOnGoal);
@@ -466,22 +469,23 @@ public class FixturesService {
 
         List<FixturesTeamGroup> teamsToReturn = new ArrayList<>();
 
-
         for (FixtureTeamsStats fixture : allFixtures) {
             FixturesTeamGroup x = new FixturesTeamGroup();
 
             x.setFixtureDate(fixture.getFixtureDate());
             x.setFixtureTeamStats(fixture);
+
             x.setTeamStats(fixture.getTeamStats());
             x.setTeamName(fixture.getTeamStats().getTeamName());
             x.setSeason(fixture.getTeamStats().getSeason());
 
+            double normPasses = fixture.getPasses() / maxPasses;
             double normAccPasses = fixture.getAccuracyPasses() / maxAccuratePasses;
             double normKeyPasses = fixture.getKeyPasses() / maxKeyPasses;
             double normAsists = fixture.getAsists() / maxAsists;
-            double sumPIK = ((normAccPasses * weights[1]) +
+            double sumPIK = ((normAccPasses * weights[1]) + (normPasses * weights[0]) +
                     (normKeyPasses * weights[2]) + (normAsists * weights[15]))
-                     / (weights[1] + weights[2] + weights[15]);
+                     / (weights[1] + weights[2] + weights[15] + weights[0]);
             x.setPodaniaKreatywnosc(sumPIK);
 
             double normDribblesWon = fixture.getDribblesWon() / maxDribbleWon;
@@ -509,14 +513,12 @@ public class FixturesService {
 
             double normDuelsWon = fixture.getDuelsWon() / maxDuelsWon;
             double normInterpWon = fixture.getInterceptions() / maxInterpWon;
-            double normFoulsDrawn = fixture.getFoulsDrawn() / maxFoulsCommited;
+            double normFoulsDrawn = fixture.getFoulsDrawn() / maxFoulsDrawn;
             double normBlocks = fixture.getBlocks() / maxBlocks;
             double sumOIK = ((normDuelsWon * weights[13]) + (normInterpWon * weights[12]) +
                     (normFoulsDrawn * weights[8]) + (normBlocks * weights[17]))
                     / (weights[13] + weights[12] + weights[8] + weights[17]);
             x.setObronaKotrolaPrzeciwnika(sumOIK);
-
-
             if (addToDB) {
                 fixturesTeamGroupRepo.save(x);
             } else {

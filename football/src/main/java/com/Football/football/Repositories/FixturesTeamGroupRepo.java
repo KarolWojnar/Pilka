@@ -11,6 +11,6 @@ import java.util.List;
 import java.util.Optional;
 
 public interface FixturesTeamGroupRepo extends CrudRepository<FixturesTeamGroup, Long> {
-    @Query("SELECT MIN(ft.fixtureDate) FROM FixturesTeamGroup ft")
+    @Query("SELECT MIN(ft.fixtureDate) FROM FixtureTeamsStats ft")
     Optional<LocalDate> getMinFixturesTeamGroup();
 }

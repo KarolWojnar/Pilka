@@ -23,7 +23,6 @@ public class TeamStats {
     private long teamId;
     @Column(name = "sezon")
     private Long season;
-    public TeamStats() {}
     @Column(name = "Mecze domowe")
     private double meczeDomowe;
     @Column(name = "Mecze wyjazdowe")
@@ -85,7 +84,7 @@ public class TeamStats {
     private List<FixturesStats> fixtures;
     @OneToMany(mappedBy = "enemyStats", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<FixturesStats> enemy;
-    @OneToMany(mappedBy = "teamStats", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "teamStats", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
     private List<FixtureTeamsStats> teamStats;
     @ManyToMany(mappedBy = "teamStats")
     private List<CoachTeam> coaches;

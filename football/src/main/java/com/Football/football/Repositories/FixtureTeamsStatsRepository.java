@@ -18,5 +18,4 @@ public interface FixtureTeamsStatsRepository extends CrudRepository<FixtureTeams
     @Query(value = "SELECT id_druzyny FROM team_stats WHERE `nazwa drużyny` LIKE CONCAT('%', :name, '%') LIMIT 1", nativeQuery = true)
     Optional<Long> findIdTeam(@Param("name") String name);
     Optional<FixtureTeamsStats> findByTeamStats(TeamStats teamStats);
-
 }

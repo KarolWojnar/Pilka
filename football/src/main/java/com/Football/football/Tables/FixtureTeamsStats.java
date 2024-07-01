@@ -17,7 +17,7 @@ public class FixtureTeamsStats {
     private Long id;
     @Column(name ="id spotkania")
     private int fixtureId;
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "id druzyny")
     private TeamStats teamStats;
     @Column(name = "data spotkania")

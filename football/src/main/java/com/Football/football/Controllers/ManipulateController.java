@@ -70,6 +70,7 @@ public class ManipulateController {
     @GetMapping("/groupAll")
     public String groupAll() {
         Iterable<FixtureTeamsStats> allFixtures = fixtureTeamsStatsRepository.findAll();
+//        Iterable<FixtureTeamsStats> allFixtures = fixtureTeamsStatsRepository.findAllWithTeamInfo();
         fixtureService.groupAllTeams(allFixtures, true);
         return "index";
     }
