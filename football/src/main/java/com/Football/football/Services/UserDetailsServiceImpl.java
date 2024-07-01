@@ -4,6 +4,9 @@ import com.Football.football.Repositories.CoachRepository;
 import com.Football.football.Tables.CoachTeam;
 import lombok.RequiredArgsConstructor;
 import org.hibernate.Hibernate;
+import org.springframework.context.annotation.Bean;
+import org.springframework.security.access.hierarchicalroles.RoleHierarchy;
+import org.springframework.security.access.hierarchicalroles.RoleHierarchyImpl;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -31,5 +34,13 @@ public class UserDetailsServiceImpl implements UserDetailsService {
                         .map(role -> new SimpleGrantedAuthority(role.getName()))
                         .collect(Collectors.toList())
         );
+    }
+
+    @Bean
+    public RoleHierarchy roleHierarchy() {
+        RoleHierarchyImpl roleHierarchy = new RoleHierarchyImpl();
+        String hierarchy = "ROLE_ADMIN > ROLE_COACH \n ROLE_COACH > ROLE_ANALYST \n ROLE_ANALYST > ROLE_PLAYER";
+        roleHierarchy.setHierarchy(hierarchy);
+        return roleHierarchy;
     }
 }

@@ -18,7 +18,11 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import java.time.LocalDate;
+import java.util.Iterator;
+import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 @Controller
 @RequiredArgsConstructor
@@ -33,7 +37,11 @@ public class CoachController {
     @GetMapping("/register")
     public String register(Model model) {
         model.addAttribute("teams", teamStatsRepo.getDistinctTeams());
-        model.addAttribute("roles", roleRepository.findAll());
+        Iterable<Role> goodRoles = StreamSupport
+                .stream(roleRepository.findAll().spliterator(), false)
+                .filter(role -> !role.getName().equals("ADMIN"))
+                .collect(Collectors.toList());
+        model.addAttribute("roles", goodRoles);
         return "register";
     }
 

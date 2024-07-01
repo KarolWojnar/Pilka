@@ -18,12 +18,13 @@ public class RoleInitializer implements CommandLineRunner {
     @Transactional
     public void run(String... args) throws Exception {
         createRoleIfNotFound("PLAYER");
+        createRoleIfNotFound("ADMIN");
         createRoleIfNotFound("COACH");
         createRoleIfNotFound("ANALYST");
     }
 
     @Transactional
-    Role createRoleIfNotFound(String name) {
+    public Role createRoleIfNotFound(String name) {
         Role role = entityManager.createQuery("SELECT r FROM Role r WHERE r.name = :name", Role.class)
                 .setParameter("name", name)
                 .getResultList()

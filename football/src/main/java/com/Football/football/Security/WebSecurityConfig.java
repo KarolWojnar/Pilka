@@ -29,7 +29,8 @@ public class WebSecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .authorizeHttpRequests(authz -> authz
-                        .requestMatchers("/profile").hasAuthority("COACH")
+                        .requestMatchers("/profile/**").hasAuthority("COACH")
+                        .requestMatchers("/admin/**").hasAuthority("ADMIN")
                         .anyRequest().permitAll()
                 )
                 .formLogin(form -> form
