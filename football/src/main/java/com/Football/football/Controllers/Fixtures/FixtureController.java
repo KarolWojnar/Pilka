@@ -1,8 +1,6 @@
 package com.Football.football.Controllers.Fixtures;
 
 import com.Football.football.Services.FixturesService;
-import com.Football.football.Tables.FixturesStats;
-import com.Football.football.Tables.PlayerStats;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import lombok.RequiredArgsConstructor;
 import org.json.JSONException;
@@ -13,8 +11,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.util.List;
 
 @Controller
 @RequestMapping("/fixtures")
@@ -35,11 +31,11 @@ public class FixtureController {
                               @RequestParam("rounding") String rounding,
                               Model model) throws JsonProcessingException {
         fixtureService.getRatingsByDateAndTeamId(teamName, startDate, endDate, rounding, model);
-        return "fixtures";
+        return "adminHandler";
     }
 
     @GetMapping
     public String getFixtureView() {
-        return "fixtures";
+        return "adminHandler";
     }
 }

@@ -35,12 +35,4 @@ public class UserDetailsServiceImpl implements UserDetailsService {
                         .collect(Collectors.toList())
         );
     }
-
-    @Bean
-    public RoleHierarchy roleHierarchy() {
-        RoleHierarchyImpl roleHierarchy = new RoleHierarchyImpl();
-        String hierarchy = "ROLE_ADMIN > ROLE_COACH \n ROLE_COACH > ROLE_ANALYST \n ROLE_ANALYST > ROLE_PLAYER";
-        roleHierarchy.setHierarchy(hierarchy);
-        return roleHierarchy;
-    }
 }

@@ -33,7 +33,7 @@ public class TeamController {
     }
 
     @GetMapping("/getLeagueAll/{leagueId}&{season}")
-    public String getAllTeamsByLeague(@PathVariable Long leagueId, @PathVariable Long season) throws JSONException, IOException, InterruptedException {
+    public String getAllTeamsByLeague(@PathVariable Long leagueId, @PathVariable Long season) throws Exception {
         teamStatsService.getAllTeamsByLeague(leagueId, season);
         return "index";
     }

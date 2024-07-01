@@ -32,7 +32,7 @@ public class TeamStatsService {
 
     private HttpClient httpClient = HttpClient.newHttpClient();
 
-    public void getAllTeamsByLeague(long leagueId, Long season) throws IOException, InterruptedException, JSONException {
+    public void getAllTeamsByLeague(long leagueId, Long season) throws Exception {
         int attempts = 0;
         while (attempts < apiKeyManager.getApiKeysLength()) {
             HttpRequest request = HttpRequest.newBuilder()
@@ -70,7 +70,7 @@ public class TeamStatsService {
         throw new IOException("Failed to retrieve data from API after trying all API keys.");
     }
 
-    private void getLeagueById(Long leagueId) throws IOException, InterruptedException, JSONException {
+    private void getLeagueById(Long leagueId) throws Exception {
         Optional<Leagues> optionalLeague = leaguesRepository.getFirstByLeagueId(leagueId);
         if (optionalLeague.isEmpty()) {
             int attempts = 0;
@@ -83,14 +83,16 @@ public class TeamStatsService {
                         .build();
 
                 HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-
                 if (response.statusCode() == 429) {
                     apiKeyManager.switchToNextApiKey();
                     attempts++;
                 } else if (response.statusCode() == 200) {
                     String responseBody = response.body();
                     JSONObject jsonResponse = new JSONObject(responseBody);
-
+                    int results = jsonResponse.getJSONObject("parameters").getInt("results");
+                    if (results == 0) {
+                        throw new Exception("League not found");
+                    }
                     if (jsonResponse.has("response")) {
                         JSONObject leagueObject = jsonResponse.getJSONArray("response").getJSONObject(0);
                         Leagues league = new Leagues();

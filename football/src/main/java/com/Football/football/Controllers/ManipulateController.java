@@ -12,11 +12,13 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
 
 import java.util.List;
 
 @Controller
 @RequiredArgsConstructor
+@RequestMapping("/hidden")
 public class ManipulateController {
 
     private final PlayerStatsService playerStatsService;
@@ -70,7 +72,6 @@ public class ManipulateController {
     @GetMapping("/groupAll")
     public String groupAll() {
         Iterable<FixtureTeamsStats> allFixtures = fixtureTeamsStatsRepository.findAll();
-//        Iterable<FixtureTeamsStats> allFixtures = fixtureTeamsStatsRepository.findAllWithTeamInfo();
         fixtureService.groupAllTeams(allFixtures, true);
         return "index";
     }

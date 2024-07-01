@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class'
+        }
+    </script>
+    <meta charset="UTF-8">
+    <title>Fixtures</title>
+</head>
+<body class="bg-gray-800 flex items-center justify-center">
+<div class="bg-gray-700 p-8 rounded-lg shadow-md w-1/2 max-w-8xl">
+    <h1 class="text-2xl font-bold mb-6 text-white">
+        Enter league ID and season you want to download</h1>
+    <form th:action="@{/admin/getAll}" th:method="get" class="mb-6">
+        <div class="mb-3 mx-5">
+            <label for="leagueId" class="block text-gray-300 text-sm font-bold mb-2">League ID</label>
+            <input required type="number" id="leagueId" name="leagueId" class="text-1xl shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+        </div>
+        <div class="mb-3 mx-5">
+            <label for="season" class="block text-gray-300 text-sm font-bold mb-2">Season</label>
+            <input required type="number" id="season" name="season" class="text-1xl shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+        </div>
+        <div class="flex justify-center">
+            <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">Submit</button>
+        </div>
+    </form>
+
+    <div th:if="${error}" class="mt-4 text-red-500 text-center">
+        <p th:text="${error}"></p>
+    </div>
+    <div th:if="${success}" class="mt-4 text-green-500 text-center">
+        <p th:text="${success}"></p>
+    </div>
+</div>
+
+</body>
+</html>
