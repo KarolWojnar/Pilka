@@ -16,12 +16,12 @@
     <h1 class="text-2xl font-bold text-center mb-5">Login</h1>
     <form th:action="@{/login}" method="post" id="loginForm">
         <div class="mb-4">
-            <label for="username" class="block mb-2">Username:</label>
+            <label for="username" class="block mb-2" th:default="admin">Username:</label>
             <input th:vaule="${login}" type="text" id="username" name="username" class="w-full p-2 rounded bg-gray-800 text-white" required>
         </div>
         <div class="mb-4">
             <label for="password" class="block mb-2">Password:</label>
-            <input type="password" id="password" name="password" class="w-full p-2 rounded bg-gray-800 text-white" required>
+            <input type="password" th:default="admin" id="password" name="password" class="w-full p-2 rounded bg-gray-800 text-white" required>
         </div>
         <div class="mt-6">
             <input type="submit" value="Login" class="w-full p-2 bg-green-600 hover:bg-green-700 rounded text-white cursor-pointer">
