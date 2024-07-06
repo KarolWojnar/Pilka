@@ -56,7 +56,7 @@ public class TeamController {
                 model.addAttribute("noPlayer", "Nie ma takiej drużyny");
             }
         }
-        return "coachProfile";
+        return "coachProfileStats";
     }
 
     @GetMapping("/compare/year/{year}/teams/{teamA}&{teamB}")

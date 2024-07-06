@@ -1,170 +1,84 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
-    <meta charset="utf-8">
-    <title>Profile</title>
+    <meta charset="UTF-8">
+    <title>Coach Profile</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
             darkMode: 'class'
         }
     </script>
-    <script src="https://cdn.anychart.com/releases/8.11.0/js/anychart-core.min.js"></script>
-    <script src="https://cdn.anychart.com/releases/8.11.0/js/anychart-radar.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 </head>
-<body class="bg-gray-900">
+<body class="bg-gray-900 text-white font-sans">
 <div th:insert="~{fragments :: nav}"></div>
 <div th:if="${coach}">
-    <h1 class="text-2xl bold text-white ml-10 mt-2" th:text="'Hello, ' + ${coach.getFirstName()} + ' ' + ${coach.getLastName()}"></h1>
-</div>
-<div class="flex m-2 rounded">
-    <div class="mt-8 bg-gray-700 w-2/3 rounded p-2"
-         th:data-dates="${datesJson}"
-         th:data-my-team-ratings="${myTeamRatings}"
-         th:data-average-ratings="${averageRatings}"
-         th:data-team-name="${teamName}">
-        <h2 class="text-xl font-bold text-white mb-4">Team stats:</h2>
-
-        <form id="filtersForm" action="#" method="GET" class="mb-4">
-            <div class="flex items-center space-x-4">
-                <input id="startDate" name="startDate" type="text" placeholder="Start Date" th:value="${startDate}" class="form-input px-4 py-2"/>
-                <input id="endDate" name="endDate" type="text" placeholder="End Date" th:value="${endDate}" class="form-input px-4 py-2"/>
-                <select name="rounding" class="form-select px-4 py-2">
-                    <option value="week" selected>Week</option>
-                    <option value="month">Month</option>
-                </select>
-                <button type="submit" class="px-4 py-2 bg-blue-500 text-white rounded" onclick="return validateDates()">Apply</button>
+    <div class="container mx-auto mt-10 px-5 py-3 bg-gray-700 rounded shadow-lg max-w-4xl">
+        <h1 class="text-2xl font-bold text-center mb-5" th:text="'Profile of ' + ${coach.getFirstName()} + ' ' + ${coach.getLastName()}"></h1>
+        <div class="grid grid-cols-2 gap-4 mb-5">
+            <div>
+                <p><strong>First Name:</strong> <span th:text="${coach.getFirstName()}"></span></p>
+                <p><strong>Last Name:</strong> <span th:text="${coach.getLastName()}"></span></p>
+                <p><strong>Login:</strong> <span th:text="${coach.getLogin()}"></span></p>
+                <p><strong>Email:</strong> <span th:text="${coach.getEmail()}"></span></p>
             </div>
-            <div id="error-message" class="text-red-500 mt-2"></div>
-        </form>
-
-        <canvas id="teamChart" width="400" height="200"></canvas>
-        <script>
-            document.addEventListener("DOMContentLoaded", function() {
-                flatpickr("#startDate", {
-                    dateFormat: "Y-m-d",
-                });
-                flatpickr("#endDate", {
-                    dateFormat: "Y-m-d",
-                });
-
-                const datesJson = document.querySelector('.mt-8').dataset.dates;
-                const myTeamRatingsJson = document.querySelector('.mt-8').dataset.myTeamRatings;
-                const averageRatingsJson = document.querySelector('.mt-8').dataset.averageRatings;
-                const teamNameJson = document.querySelector('.mt-8').dataset.teamName;
-
-                try {
-                    const labels = JSON.parse(datesJson);
-                    const myTeamData = JSON.parse(myTeamRatingsJson);
-                    const averageTeamData = JSON.parse(averageRatingsJson);
-                    const teamName = teamNameJson;
-
-                    if (labels.length === 0 || myTeamData.length === 0 || averageTeamData.length === 0) {
-                        console.log('No data');
-                    } else {
-                        const ctx = document.getElementById('teamChart').getContext('2d');
-                        new Chart(ctx, {
-                            type: 'line',
-                            data: {
-                                labels: labels,
-                                datasets: [{
-                                    label: teamName,
-                                    data: myTeamData,
-                                    borderColor: 'rgb(0,59,141)',
-                                    borderWidth: 2,
-                                    fill: false
-                                }, {
-                                    label: 'Average of all teams',
-                                    data: averageTeamData,
-                                    borderColor: 'rgb(1,124,152)',
-                                    borderWidth: 1,
-                                    fill: false
-                                }]
-                            },
-                            options: {
-                                scales: {
-                                    y: {
-                                        beginAtZero: true
-                                    }
-                                }
-                            }
-                        });
-                    }
-                } catch (error) {
-                    console.error('Error parsing JSON:', error);
-                }
-            });
-
-            function validateDates() {
-                const startDate = document.getElementById('startDate').value;
-                const endDate = document.getElementById('endDate').value;
-                const errorMessage = document.getElementById('error-message');
-
-                if (startDate && endDate && new Date(startDate) > new Date(endDate)) {
-                    errorMessage.textContent = 'Start date cannot be greater than end date.';
-                    return false;
-                }
-                errorMessage.textContent = '';
-                return true;
-            }
-        </script>
-    </div>
-
-    <div class="mt-2 bg-gray-900 w-1/3 h-auto ml-2">
-        <div class="grid grid-cols-1 gap-4">
-            <div id="container" class="bg-gray-900 h-96"></div>
-            <div class="bg-gray-900">
-                <div th:if="${TeamA}">
-                    <script th:inline="javascript">
-                        anychart.onDocumentReady(function () {
-                            var chartData = {
-                                header: ['#', /*[[${TeamA.teamName}]]*/, /*[[${TeamB.teamName}]]*/],
-                                rows: [
-                                    ['Physicality ', /*[[${TeamA.fizycznoscInterakcje}]]*/, /*[[${TeamB.fizycznoscInterakcje}]]*/],
-                                    ['Defense ', /*[[${TeamA.obronaKotrolaPrzeciwnika}]]*/, /*[[${TeamB.obronaKotrolaPrzeciwnika}]]*/],
-                                    ['Dribbling', /*[[${TeamA.dryblingSkutecznosc}]]*/, /*[[${TeamB.dryblingSkutecznosc}]]*/],
-                                    ['Creativity', /*[[${TeamA.podaniaKreatywnosc}]]*/, /*[[${TeamB.podaniaKreatywnosc}]]*/]
-                                ]
-                            };
-                            var chart = anychart.radar();
-                            chart.defaultSeriesType('area');
-                            chart.data(chartData);
-                            chart.background().fill('rgb(55,65,81)');
-                            chart.palette(['rgb(0,59,141)', 'rgb(1,124,152)']);
-                            chart.yAxis().stroke('rgba(255,255,255,0.15)');
-                            chart.yAxis().ticks().stroke('rgba(255,255,255,0.11)');
-                            chart.xGrid().stroke({
-                                color: "rgba(255,255,255,0.15)",
-                                thickness: 0.5,
-                                dash: "10 5"
-                            });
-                            chart.yGrid().palette(['gray 0.05', 'gray 0.025']);
-                            chart.yScale().minimum(0);
-                            chart.yScale().ticks().interval(0.03);
-                            chart.interactivity().hoverMode('by-x');
-                            chart.markerPalette(['star5']);
-                            chart.tooltip()
-                                .displayMode('union')
-                                .useHtml(true)
-                                .format(function(){
-                                    return '<span style="color:' + this.series.color() + '">' +
-                                        this.seriesName + ": " + this.value + "</span>"
-                                });
-                            chart.legend()
-                                .align('center')
-                                .position('center-bottom')
-                                .enabled(true);
-                            chart.container('container');
-                            chart.draw();
-                        });
-                    </script>
+            <div>
+                <p><strong>Teams:</strong></p>
+                <ul>
+                    <li th:each="teamStat : ${coach.teamStats}" th:text="${teamStat.teamName}"></li>
+                </ul>
+                <p><strong>Roles:</strong></p>
+                <ul>
+                    <li th:each="role : ${coach.roles}" th:text="${role.name}"></li>
+                </ul>
+            </div>
+        </div>
+        <div>
+            <button id="editProfileBtn" class="w-full p-2 bg-blue-600 hover:bg-blue-700 rounded text-white cursor-pointer">Edit Profile</button>
+        </div>
+        <div id="editProfileForm" class="hidden mt-5">
+            <h2 class="text-xl font-bold text-center mb-5">Edit Profile</h2>
+            <form th:action="@{/editProfile}" method="post" id="profileForm">
+                <div class="mb-4">
+                    <label for="firstName" class="block mb-2">First Name:</label>
+                    <input type="text" id="firstName" name="firstName" th:value="${coach.getFirstName()}" class="w-full p-2 rounded bg-gray-800 text-white" required>
                 </div>
-            </div>
+                <div class="mb-4">
+                    <label for="lastName" class="block mb-2">Last Name:</label>
+                    <input type="text" id="lastName" name="lastName" th:value="${coach.getLastName()}" class="w-full p-2 rounded bg-gray-800 text-white" required>
+                </div>
+                <div class="mb-4">
+                    <label for="email" class="block mb-2">Email:</label>
+                    <input type="email" id="email" name="email" th:value="${coach.getEmail()}" class="w-full p-2 rounded bg-gray-800 text-white" required>
+                </div>
+                <div class="mb-4">
+                    <label for="login" class="block mb-2">Login:</label>
+                    <input type="text" id="login" name="login" th:value="${coach.getLogin()}" class="w-full p-2 rounded bg-gray-800 text-white" required>
+                </div>
+                <div class="mb-4">
+                    <label for="roleId" class="block mb-2">Role:</label>
+                    <select id="roleId" name="roleId" class="w-full p-2 rounded bg-gray-800 text-white" required>
+                        <option th:each="role : ${roles}" th:value="${role.id}" th:text="${role.name}"></option>
+                    </select>
+                </div>
+                <div class="mb-4">
+                    <label for="teamId" class="block mb-2">Team:</label>
+                    <select id="teamId" name="teamId" class="w-full p-2 rounded bg-gray-800 text-white" required>
+                        <option th:each="team : ${teams}" th:value="${team.id}" th:text="${team.teamName}"></option>
+                    </select>
+                </div>
+                <div class="mt-6">
+                    <input type="submit" value="Save Changes" class="w-full p-2 bg-green-600 hover:bg-green-700 rounded text-white cursor-pointer">
+                </div>
+            </form>
         </div>
     </div>
 </div>
+<script>
+    document.getElementById('editProfileBtn').addEventListener('click', function() {
+        document.getElementById('editProfileForm').classList.toggle('hidden');
+    });
+</script>
 </body>
 </html>

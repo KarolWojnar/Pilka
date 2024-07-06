@@ -15,7 +15,9 @@
         <ul class="flex space-x-4 mx-24 items-end">
             <li><a th:href="@{/}" class="text-white hover:text-blue-500">Home</a></li>
             <li><a th:href="@{/profile}" class="text-white hover:text-blue-500">Profile</a></li>
-            <li><a th:if="${#authentication.getAuthorities().stream().findFirst().get().getAuthority().equals('ADMIN')}" th:href="@{/admin}" class="text-white hover:text-blue-500">New league</a></li>
+            <li><a th:href="@{/profile/stats}" class="text-white hover:text-blue-500">Statistics</a></li>
+            <li><a th:if="${#authentication.getAuthorities().stream().findFirst().get().getAuthority().equals('ADMIN')}" th:href="@{/admin/leagues}" class="text-white hover:text-blue-500">New league</a></li>
+            <li><a th:if="${#authentication.getAuthorities().stream().findFirst().get().getAuthority().equals('ADMIN')}" th:href="@{/admin/users}" class="text-white hover:text-blue-500">Users</a></li>
             <li th:if="${!#authorization.getAuthentication().isAuthenticated()}"><a th:href="@{/login}" class="text-white hover:text-blue-500">Login</a></li>
             <li th:if="${#authorization.getAuthentication().isAuthenticated()}">
                 <form th:action="@{/logout}" method="post">

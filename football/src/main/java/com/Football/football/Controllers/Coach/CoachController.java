@@ -60,6 +60,24 @@ public class CoachController {
     }
 
     @GetMapping("/profile")
+    public String profileCoach(Model model) {
+
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        Optional<CoachTeam> coach = coachRepository.findUser(auth.getName());
+        Iterable<Role> goodRoles = StreamSupport
+                .stream(roleRepository.findAll().spliterator(), false)
+                .filter(role -> !role.getName().equals("ADMIN"))
+                .collect(Collectors.toList());
+        model.addAttribute("roles", goodRoles);
+        model.addAttribute("teams", teamStatsRepo.getDistinctTeams());
+        if (coach.isPresent()) {
+            model.addAttribute("coach", coach.get());
+        } else {
+            model.addAttribute("error", "No profile data.");
+        }
+        return "coachProfile";
+    }
+    @GetMapping("/profile/stats")
     public String goToProfile(
             @RequestParam(value = "startDate", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam(value = "endDate", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
@@ -81,7 +99,7 @@ public class CoachController {
             coachService.getRatingsByDateAndTeamId(coach.get().getTeamStats().getFirst().getTeamId(), startDate, endDate, rounding, model);
             coachService.getPlayers(coach.get().getTeamStats().getFirst().getTeamId(), startDate, endDate, model);
         }
-        return "coachProfile";
+        return "coachProfileStats";
     }
 
     @GetMapping("/checkLogin")
@@ -96,5 +114,10 @@ public class CoachController {
     public ResponseEntity<Boolean> checkEmail(@RequestParam("email") String email) {
         boolean exists = coachRepository.findCoachTeamByEmail(email).isPresent();
         return ResponseEntity.ok(exists);
+    }
+
+    @PostMapping("/saveChanges")
+    public String saveChanges(@ModelAttribute CoachTeam coachTeam, Model model) {
+        return "redirect:/profile";
     }
 }
