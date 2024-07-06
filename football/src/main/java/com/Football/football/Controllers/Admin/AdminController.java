@@ -49,7 +49,7 @@ public class AdminController {
         return ResponseEntity.ok(Map.of("success", success));
     }
 
-    @PostMapping("/deleteCoach")
+    @GetMapping("/deleteCoach")
     @ResponseBody
     public ResponseEntity<?> deleteCoach(@RequestParam Long id) {
         boolean success = coachService.deleteCoach(id);

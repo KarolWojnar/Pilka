@@ -120,6 +120,16 @@ public class CoachService {
     }
 
     public boolean deleteCoach(Long id) {
-        return true;
+        Optional<CoachTeam> opCoach = coachRepository.findById(id);
+        if (opCoach.isPresent()) {
+            opCoach.get().getRoles().clear();
+            opCoach.get().getTeamStats().clear();
+            coachRepository.delete(opCoach.get());
+        }
+        opCoach = coachRepository.findById(id);
+        return opCoach.isEmpty();
+    }
+
+    public void deleteUser(long id) {
     }
 }
