@@ -9,6 +9,7 @@ import com.Football.football.Tables.CoachTeam;
 import com.Football.football.Tables.Role;
 import com.Football.football.Tables.TeamStats;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
@@ -57,7 +58,7 @@ public class CoachController {
     }
 
     @GetMapping("/profile")
-    public String profileCoach(Model model) {
+    public String profileCoach(Model model, HttpServletRequest request) {
 
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         Optional<CoachTeam> coach = coachRepository.findUser(auth.getName());
@@ -72,14 +73,15 @@ public class CoachController {
         } else {
             model.addAttribute("error", "No profile data.");
         }
+        model.addAttribute("request", request);
         return "coachProfile";
     }
-    @GetMapping("/profile/stats")
+    @GetMapping("/stats")
     public String goToProfile(
             @RequestParam(value = "startDate", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam(value = "endDate", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
             @RequestParam(value = "rounding", required = false, defaultValue = "week") String rounding,
-            Model model) throws JsonProcessingException {
+            Model model, HttpServletRequest request) throws JsonProcessingException {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         Optional<CoachTeam> coach = coachRepository.findUser(auth.getName());
         if (coach.isPresent()) {
@@ -96,6 +98,7 @@ public class CoachController {
             coachService.getRatingsByDateAndTeamId(coach.get().getTeamStats().getFirst().getTeamId(), startDate, endDate, rounding, model);
             coachService.getPlayers(coach.get().getTeamStats().getFirst().getTeamId(), startDate, endDate, model);
         }
+        model.addAttribute("request", request);
         return "coachProfileStats";
     }
 

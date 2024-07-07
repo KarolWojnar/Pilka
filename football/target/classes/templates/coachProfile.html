@@ -39,7 +39,8 @@
         </div>
         <div id="editProfileForm" class="hidden mt-5">
             <h2 class="text-xl font-bold text-center mb-5">Edit Profile</h2>
-            <form th:action="@{/editProfile}" method="post" id="profileForm">
+            <form id="profileForm" method="post">
+                <input type="hidden" id="coachId" name="coachId" th:value="${coach.getId()}">
                 <div class="mb-4">
                     <label for="firstName" class="block mb-2">First Name:</label>
                     <input type="text" id="firstName" name="firstName" th:value="${coach.getFirstName()}" class="w-full p-2 rounded bg-gray-800 text-white" required>
@@ -51,10 +52,12 @@
                 <div class="mb-4">
                     <label for="email" class="block mb-2">Email:</label>
                     <input type="email" id="email" name="email" th:value="${coach.getEmail()}" class="w-full p-2 rounded bg-gray-800 text-white" required>
+                    <div id="email-error" class="text-red-500 text-sm mt-2 hidden">Email is already taken.</div>
                 </div>
                 <div class="mb-4">
                     <label for="login" class="block mb-2">Login:</label>
                     <input type="text" id="login" name="login" th:value="${coach.getLogin()}" class="w-full p-2 rounded bg-gray-800 text-white" required>
+                    <div id="login-error" class="text-red-500 text-sm mt-2 hidden">Login is already taken.</div>
                 </div>
                 <div class="mb-4">
                     <label for="roleId" class="block mb-2">Role:</label>
@@ -76,8 +79,72 @@
     </div>
 </div>
 <script>
-    document.getElementById('editProfileBtn').addEventListener('click', function() {
-        document.getElementById('editProfileForm').classList.toggle('hidden');
+    $(document).ready(function() {
+        var oldLogin = $("#login").val();
+        var oldEmail = $("#email").val();
+
+        $('#editProfileBtn').click(function() {
+            $('#editProfileForm').toggleClass('hidden');
+        });
+
+        $('#profileForm').submit(function(event) {
+            event.preventDefault();
+
+            const formData = {
+                id: $('#coachId').val(),
+                firstName: $('#firstName').val(),
+                lastName: $('#lastName').val(),
+                email: $('#email').val(),
+                login: $('#login').val(),
+                teamId: $('#teamId').val(),
+                roleId: $('#roleId').val()
+            };
+
+            function updateProfile() {
+                $.ajax({
+                    type: 'POST',
+                    url: 'coach/updateCoach',
+                    data: formData,
+                    success: function(response) {
+                        if (response.success) {
+                            location.reload();
+                        } else {
+                            alert('Failed to update profile');
+                        }
+                    }
+                });
+            }
+
+            if (formData.login === oldLogin && formData.email === oldEmail) {
+                updateProfile();
+            } else {
+                $.ajax({
+                    type: 'GET',
+                    url: '/checkLogin',
+                    data: { login: formData.login },
+                    success: function(response) {
+                        if (response && oldLogin !== formData.login) {
+                            $('#login-error').removeClass('hidden');
+                        } else {
+                            $('#login-error').addClass('hidden');
+                            $.ajax({
+                                type: 'GET',
+                                url: '/checkEmail',
+                                data: { email: formData.email },
+                                success: function(response) {
+                                    if (response && oldEmail !== formData.email) {
+                                        $('#email-error').removeClass('hidden');
+                                    } else {
+                                        $('#email-error').addClass('hidden');
+                                        updateProfile();
+                                    }
+                                }
+                            });
+                        }
+                    }
+                });
+            }
+        });
     });
 </script>
 </body>

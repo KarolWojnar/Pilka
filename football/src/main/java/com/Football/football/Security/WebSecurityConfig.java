@@ -30,7 +30,7 @@ public class WebSecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .authorizeHttpRequests(authz -> authz
-                        .requestMatchers("/profile/**").hasAnyAuthority("COACH", "ADMIN")
+                        .requestMatchers("/profile/**", "/stats/**").hasAnyAuthority("COACH", "ADMIN")
                         .requestMatchers("/admin/**", "/hidden/**").hasAuthority("ADMIN")
                         .anyRequest().permitAll()
                 )

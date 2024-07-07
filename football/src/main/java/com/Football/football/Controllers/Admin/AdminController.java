@@ -7,6 +7,7 @@ import com.Football.football.Services.CoachService;
 import com.Football.football.Services.FixturesService;
 import com.Football.football.Services.PlayerStatsService;
 import com.Football.football.Services.TeamStatsService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.transaction.Transactional;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -31,14 +32,16 @@ public class AdminController {
     private final RoleRepository roleRepository;
     private final CoachService coachService;
     @GetMapping("/leagues")
-    public String returnAdminPanel() {
+    public String returnAdminPanel(Model model, HttpServletRequest request) {
+        model.addAttribute("request", request);
         return "adminHandler";
     }
     @GetMapping("/users")
-    public String returnUsersAdmin(Model model) {
+    public String returnUsersAdmin(HttpServletRequest request, Model model) {
         model.addAttribute("coaches", coachRepository.findAll());
         model.addAttribute("teams", teamStatsRepo.getDistinctTeams());
         model.addAttribute("roles", roleRepository.findAll());
+        model.addAttribute("request", request);
         return "adminCoachHandler";
     }
 
