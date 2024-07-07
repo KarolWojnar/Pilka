@@ -42,13 +42,6 @@ public class AdminController {
         return "adminCoachHandler";
     }
 
-    @PostMapping("/updateCoach")
-    @ResponseBody
-    public ResponseEntity<?> updateCoach(@RequestParam Map<String, String> params) {
-        boolean success = coachService.updateCoach(params);
-        return ResponseEntity.ok(Map.of("success", success));
-    }
-
     @GetMapping("/deleteCoach")
     @ResponseBody
     public ResponseEntity<?> deleteCoach(@RequestParam Long id) {

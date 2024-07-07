@@ -18,10 +18,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import java.time.LocalDate;
-import java.util.Arrays;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
@@ -119,5 +116,13 @@ public class CoachController {
     @PostMapping("/saveChanges")
     public String saveChanges(@ModelAttribute CoachTeam coachTeam, Model model) {
         return "redirect:/profile";
+    }
+
+    @PostMapping("/coach/updateCoach")
+    @ResponseBody
+    public ResponseEntity<?> updateCoach(@RequestParam Map<String, String> params) {
+        System.out.println(params);
+        boolean success = coachService.updateCoach(params);
+        return ResponseEntity.ok(Map.of("success", success));
     }
 }

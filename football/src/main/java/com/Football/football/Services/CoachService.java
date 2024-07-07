@@ -2,6 +2,8 @@ package com.Football.football.Services;
 
 import com.Football.football.Repositories.CoachRepository;
 import com.Football.football.Repositories.FixtureTeamsStatsRepository;
+import com.Football.football.Repositories.RoleRepository;
+import com.Football.football.Repositories.TeamStatsRepo;
 import com.Football.football.Tables.*;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -21,6 +23,8 @@ public class CoachService {
     private final CoachRepository coachRepository;
     private final FixtureTeamsStatsRepository fixtureTeamsStatsRepository;
     private final FixturesService fixturesService;
+    private final RoleRepository roleRepository;
+    private final TeamStatsRepo teamStatsRepo;
 
     public String saveTeam(CoachTeam coach, TeamStats team, Role role) {
         coach.setPassword(bCryptPasswordEncoder.encode(coach.getPassword()));
@@ -116,6 +120,21 @@ public class CoachService {
     }
 
     public boolean updateCoach(Map<String, String> params) {
+        long coachId = Long.parseLong(params.get("id"));
+        Optional<CoachTeam> opCoach = coachRepository.findById(coachId);
+        if (opCoach.isPresent()) {
+            CoachTeam newData = opCoach.get();
+            newData.setFirstName(params.get("firstName"));
+            newData.setLastName(params.get("lastName"));
+            newData.setEmail(params.get("email"));
+            newData.setLogin(params.get("login"));
+
+            TeamStats teamStats = teamStatsRepo.findFirstById(Long.parseLong(params.get("teamId"))).orElseThrow(() -> new IllegalArgumentException("Invalid team ID"));
+            Role role = roleRepository.findById(Long.valueOf(params.get("roleId"))).orElseThrow(() -> new IllegalArgumentException("Invalid role ID"));
+            newData.setTeamStats(List.of(teamStats));
+            newData.setRoles(List.of(role));
+            coachRepository.save(newData);
+        }
         return true;
     }
 
