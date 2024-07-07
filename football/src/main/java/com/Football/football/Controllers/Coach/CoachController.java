@@ -121,7 +121,6 @@ public class CoachController {
     @PostMapping("/coach/updateCoach")
     @ResponseBody
     public ResponseEntity<?> updateCoach(@RequestParam Map<String, String> params) {
-        System.out.println(params);
         boolean success = coachService.updateCoach(params);
         return ResponseEntity.ok(Map.of("success", success));
     }
