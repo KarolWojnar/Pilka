@@ -83,14 +83,12 @@
             <div class="mb-4">
                 <label for="editTeam" class="block mb-2">Team:</label>
                 <select id="editTeam" name="team" class="w-full p-2 rounded bg-gray-800 text-white" required>
-                    <option selected id="setCoachTeam"></option>
                     <option th:each="team : ${teams}" th:value="${team.id}" th:text="${team.teamName}"></option>
                 </select>
             </div>
             <div class="mb-4">
                 <label for="editRole" class="block mb-2">Role:</label>
                 <select id="editRole" name="role" class="w-full p-2 rounded bg-gray-800 text-white" required>
-                    <option selected id="setCoachRole"></option>
                     <option th:each="role : ${roles}" th:value="${role.id}" th:text="${role.name}"></option>
                 </select>
             </div>
